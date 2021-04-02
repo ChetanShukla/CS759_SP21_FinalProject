@@ -1,11 +1,11 @@
 function runExamples(varargin)
-% runPreprocess is the "main" interface that lets you execute all the 
-% preprocessing methods.
+% runExamples is the "main" interface that lets you execute all the 
+% example methods.
 %
 % Usage:
-% runPreprocess                       : list all the registered functions
-% runPreprocess('function_name')      : execute a specific test
-% runPreprocess('all')                : execute all the registered functions
+% runExamples                       : list all the registered functions
+% runExamples('function_name')      : execute a specific test
+% runExamples('all')                : execute all the registered functions
 
 % Settings to make sure images are displayed without borders.
 orig_imsetting = iptgetpref('ImshowBorder');
