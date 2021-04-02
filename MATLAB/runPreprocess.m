@@ -1,38 +1,61 @@
 function runPreprocess
 
-% Settings to make sure images are displayed without borders.
-orig_imsetting = iptgetpref('ImshowBorder');
-iptsetpref('ImshowBorder', 'tight');
-temp1 = onCleanup(@()iptsetpref('ImshowBorder', orig_imsetting));
+% % Settings to make sure images are displayed without borders.
+% orig_imsetting = iptgetpref('ImshowBorder');
+% iptsetpref('ImshowBorder', 'tight');
+% temp1 = onCleanup(@()iptsetpref('ImshowBorder', orig_imsetting));
 
-output_folder_name = 'output';
+color_to_blackwhite
+edge_detection
+
+
+function color_to_blackwhite()
+
+output_folder_name = '../processed_images/black_white';
 if ~exist(output_folder_name, 'dir')
    mkdir(output_folder_name)
 end
+input_folder_name = '../images';
+for i = int16(1):int16(100)
+    input_img_name = strcat(input_folder_name,'/image-', num2str(i), '.png');
+    img = imread(input_img_name);
 
-
-%--------------------------------------------------------------------------
-% Tests for Challenge 1: Hough transform
-%--------------------------------------------------------------------------
-%%
-function runEdgeDetection()
-
-img_list = {'hough_1', 'hough_2', 'hough_3'};
-%fh = figure;
-for i = 1:length(img_list)
-    img = imread(['input/' img_list{i} '.png']);
+    % Convert the image to grayscale
+    gray_img = rgb2gray(img);
     
+    output_img_name = strcat(output_folder_name,'/image-', num2str(i), '.png');
+    imwrite(gray_img, output_img_name);
+end
+
+
+function edge_detection()
+
+output_folder_name = '../processed_images/edges';
+if ~exist(output_folder_name, 'dir')
+   mkdir(output_folder_name)
+end
+input_folder_name = '../processed_images/black_white';
+for i = int16(1):int16(100)
+    input_img_name = strcat(input_folder_name,'/image-', num2str(i), '.png');
+    img = imread(input_img_name);
+
     % Canny edge detection
-    thresh = 0.1;
+    thresh = 0.2;
     edge_img = edge(img,'canny', thresh);
     
-    
-    %subplot(2, 2, i);
-    %imshow(edge_img);
-    
+    output_img_name = strcat(output_folder_name,'/image-', num2str(i), '.png');
     
     % Note: The output from edge is an image of logical type.
     % Here we cast it to double before saving it.
-    imwrite(im2double(edge_img), ['output/edge_' img_list{i} '.png']);
+    imwrite(im2double(edge_img), output_img_name);
 end
+
+    
+    
+    
+    
+    
+    
+    
+
 

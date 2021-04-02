@@ -22,17 +22,10 @@ fun_handles = {@runBasicExample, ...
 % Call test harness
 runTests(varargin, fun_handles);
 
-%--------------------------------------------------------------------------
-% Tests for Walkthrough 1: Image processing
-%--------------------------------------------------------------------------
-%%
+
 function runBasicExample()
 basicExample;
 
-%--------------------------------------------------------------------------
-% Tests for Challenge 1: Hough transform
-%--------------------------------------------------------------------------
-%%
 function runEdgeDetection()
 
 img_list = {'hough_1', 'hough_2', 'hough_3'};
@@ -54,7 +47,7 @@ for i = 1:length(img_list)
     imwrite(im2double(edge_img), ['output/edge_' img_list{i} '.png']);
 end
 
-%%
+
 function runGenerateHoughAccumulator()
 img_list = {'hough_1', 'hough_2', 'hough_3'};
 
@@ -76,7 +69,7 @@ for i = 1:length(img_list)
     imwrite(uint8(hough_accumulator), ['output/accumulator_' img_list{i} '.png']);
 end
 
-%%
+
 function runFindLines()
 img_list = {'hough_1', 'hough_2', 'hough_3'};
 %1: keep at 135
@@ -98,7 +91,7 @@ for i = 1:length(img_list)
     imwrite(uint8(line_img), ['output/line_' img_list{i} '.png']);
 end
 
-%%
+
 function runFindLineSegments()
 
 img_list = {'hough_1', 'hough_2', 'hough_3'};
