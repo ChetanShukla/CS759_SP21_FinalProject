@@ -9,6 +9,7 @@ color_to_blackwhite
 image_segmentation
 edge_detection
 
+
 % Read in each image, convert to black and white, and write the image back out.
 function color_to_blackwhite()
 
@@ -22,7 +23,7 @@ end
 input_folder_name = '../images';
 for i = int16(1):int16(100)
 
-    %R ead the image
+    % Read the image
     input_img_name = strcat(input_folder_name,'/image-', num2str(i), '.png');
     img = imread(input_img_name);
 
@@ -37,6 +38,28 @@ end
 % Run image segmentation to reduce noise during edge detection.
 function image_segmentation()
 
+output_folder_name = '../processed_images/segmented';
+
+% Create the output folder if it doesn't exist
+if ~exist(output_folder_name, 'dir')
+   mkdir(output_folder_name)
+end
+
+input_folder_name = '../processed_images/black_white';
+for i = int16(1):int16(100)    
+    %Read the image
+    input_img_name = strcat(input_folder_name,'/image-', num2str(i), '.png');
+    img = imread(input_img_name);
+    
+    % Convert the image to a binary image
+    bw_img = imbinarize(img);
+    
+    % Apply median filtering
+    smoothed_img = medfilt2(bw_img);
+    
+    % Write the image
+    output_img_name = strcat(output_folder_name,'/image-', num2str(i), '.png');
+    imwrite(smoothed_img, output_img_name);
 end
 
 
@@ -51,7 +74,7 @@ output_folder_name = '../processed_images/edges';
 if ~exist(output_folder_name, 'dir')
    mkdir(output_folder_name)
 end
-input_folder_name = '../processed_images/black_white';
+input_folder_name = '../processed_images/segmented';
 for i = int16(1):int16(100)
 
     % Read the image.
