@@ -11,7 +11,8 @@ for i = 1:y
         if img(i,j) > 0 %The pixel is part of an edge.
             theta = 0;
             %already_inc = zeros(0,3);
-            for k = 1:theta_num_bins
+            for k = 1:theta_num_bins % For each x entry in the accumulator
+                % Parameterize in Polar space.
                 hough_x = k;
                 hough_y = (rho_num_bins/2) - round(-j*sin(theta)+i*cos(theta));
                 
@@ -53,6 +54,7 @@ for i = 1:y
 %                 end
 %                 already_inc = new_inc;
                 
+                % Increment the value in the accumulator.
                 acc(hough_y,hough_x) = acc(hough_y,hough_x) + 1;
                 %sassignin("base","new_inc",new_inc)
                 %fprintf("X:%.2f Y: %.2f\n", hough_x, hough_y)
@@ -64,12 +66,17 @@ for i = 1:y
     end
 end
 
+% To write the accumulator as an image, scale all values to be
+% between 0 and 255. Max value in accumulator==255
 white_balance = 255/max(max(acc));
 for i = 1:rho_num_bins
     for j = 1:theta_num_bins
+        % Scale value and round to int.
         acc(i,j) = round(acc(i,j) * white_balance);
     end
 end
+
+% Convert accumulator to int matrix and return.
 hough_img = uint8(acc);
 %assignin("base","acc",acc)
 %fprintf("Width: %d, Height: %d\n",width,height)

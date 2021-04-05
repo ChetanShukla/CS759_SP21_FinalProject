@@ -23,9 +23,9 @@ end
 %assignin("base","lines",lines)
 lines = sortrows(lines,[2,1]);
 
-%Average lines that are basically the same.
+% Average lines that are basically the same.
+% This isn't needed but reduces noise significantly.
 lines_filtered = zeros(0,2);
-
 prev_line = lines(1,:);
 sum_theta = prev_line(1);
 sum_rho = prev_line(2);
@@ -54,19 +54,27 @@ end
 
 lines = lines_filtered;
 
-[orig_y,orig_x] = size(orig_img);
-x = linspace(0,orig_x);
+
+
+% Create figure and show the image so that we can draw lines on top of it.
 fh = figure();
 figure(fh);
 imshow(orig_img);
+
+% Calculate the lines and draw them over the image.
+[orig_y,orig_x] = size(orig_img);
+x = linspace(0,orig_x);
 for i = 1:size(lines)
     theta = lines(i,1);
     rho = lines(i,2);
+    % Calculate the line in the image space
     y = sec(theta) * (rho + x * sin(theta));
+    % Draw that line on the image.
     line(x,y,'Color','red');
     %fprintf("Theta: %d Rho: %d\n",lines(i,1), lines(i,2))
 end
 
+% Save the image with the lines drawn on it.
 line_detected_img = saveAnnotatedImg(fh);
 
 delete(fh);

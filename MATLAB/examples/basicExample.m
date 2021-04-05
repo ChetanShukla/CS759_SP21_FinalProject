@@ -15,8 +15,6 @@ subplot(2, 2, 1); imshow(img); title('Color Image');
 gray_img = rgb2gray(img); 
 subplot(2, 2, 2); imshow(gray_img); title('Grayscale Image');
 
-% Convert the image to grayscale
-
 % Sobel edge detection
 thresh = 0.2;
 

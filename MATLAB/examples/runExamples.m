@@ -12,6 +12,7 @@ orig_imsetting = iptgetpref('ImshowBorder');
 iptsetpref('ImshowBorder', 'tight');
 temp1 = onCleanup(@()iptsetpref('ImshowBorder', orig_imsetting));
 
+% Create the output file if it doesn't exist
 output_folder_name = 'output';
 if ~exist(output_folder_name, 'dir')
    mkdir(output_folder_name)
@@ -22,25 +23,22 @@ fun_handles = {@runBasicExample, ...
 % Call test harness
 runTests(varargin, fun_handles);
 
-
+% Basic example to show color to black and white and 
+% edge detection all side by side.
 function runBasicExample()
 basicExample;
+
 
 function runEdgeDetection()
 
 img_list = {'hough_1', 'hough_2', 'hough_3'};
-%fh = figure;
+
 for i = 1:length(img_list)
     img = imread(['input/' img_list{i} '.png']);
     
     % Canny edge detection
     thresh = 0.1;
     edge_img = edge(img,'canny', thresh);
-    
-    
-    %subplot(2, 2, i);
-    %imshow(edge_img);
-    
     
     % Note: The output from edge is an image of logical type.
     % Here we cast it to double before saving it.
@@ -51,6 +49,7 @@ end
 function runGenerateHoughAccumulator()
 img_list = {'hough_1', 'hough_2', 'hough_3'};
 
+% Value determined through trial and error.
 theta_num_bins = 300;
 for i = 1:length(img_list)
     img = imread(['output/edge_' img_list{i} '.png']);
