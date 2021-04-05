@@ -13,7 +13,7 @@ edge_detection
 % Read in each image, convert to black and white, and write the image back out.
 function color_to_blackwhite()
 
-output_folder_name = '../processed_images/black_white';
+output_folder_name = '../processed_images/gray';
 
 % Create the output folder if it doesn't exist
 if ~exist(output_folder_name, 'dir')
@@ -45,7 +45,7 @@ if ~exist(output_folder_name, 'dir')
    mkdir(output_folder_name)
 end
 
-input_folder_name = '../processed_images/black_white';
+input_folder_name = '../processed_images/gray';
 for i = int16(1):int16(100)    
     %Read the image
     input_img_name = strcat(input_folder_name,'/image-', num2str(i), '.png');
