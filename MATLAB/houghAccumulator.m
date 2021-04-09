@@ -16,53 +16,59 @@ img = imread(input_img_name);
 
 [y,x] = size(img);
 acc_size = x;
-radius = 25;
+radius_start = 20;
+radius_len = 20;
 % init the accumulator
-acc = zeros(acc_size, acc_size);
+acc = zeros(acc_size, acc_size,radius_len);
 
 % Run through each pixel in the image
 for i = 1:y
     for j = 1:x
         if img(i,j) > 0 %The pixel is part of an edge.
-            for t = 1:360 % Draw each circle in the accumulator space
-                a = round(i-radius*sin(t*pi/180));
-                b = round(j-radius*cos(t*pi/180));
-                % Gotta be within the range
-                if a > 0 && a <= acc_size && b > 0 && b<=acc_size
-                    % Increment the value in the accumulator.
-                    acc(a,b) = acc(a,b) + 1; 
+            for r = 1:radius_len
+                for t = 1:360 % Draw each circle in the accumulator space
+                    a = round(i-(radius_start+r)*sin(t*pi/180));
+                    b = round(j-(radius_start+r)*cos(t*pi/180));
+                    % Gotta be within the range
+                    if a > 0 && a <= acc_size && b > 0 && b<=acc_size
+                        % Increment the value in the accumulator.
+                        acc(a,b,r) = acc(a,b,r) + 1; 
+                    end
                 end
             end
         end
     end
 end
 
-% To write the accumulator as an image, scale all values to be
-% between 0 and 255. Max value in accumulator==255
-white_balance = 255/max(max(acc));
-for i = 1:acc_size
-    for j = 1:acc_size
-        % Scale value and round to int.
-        acc(i,j) = round(acc(i,j) * white_balance);
-    end
-end
-
-% Write accumulator as an image
-output_img_name = strcat(output_folder_name,'/image-1.png');
-imwrite(uint8(acc), output_img_name);
+% % To write the accumulator as an image, scale all values to be
+% % between 0 and 255. Max value in accumulator==255
+% white_balance = 255/max(max(acc));
+% for i = 1:acc_size
+%     for j = 1:acc_size
+%         % Scale value and round to int.
+%         acc(i,j) = round(acc(i,j) * white_balance);
+%     end
+% end
+% 
+% % Write accumulator as an image
+% output_img_name = strcat(output_folder_name,'/image-1.png');
+% imwrite(uint8(acc), output_img_name);
 
 %Threshold at which we consider a point the center of a circle
-threshold = 200;
+%threshold = 200;
+threshold = max(max(acc)) - 3 * mean(mean(acc(acc>0)));
 
-[hough_y, hough_x] = size(acc);
+[hough_y, hough_x, hough_z] = size(acc);
 
 % Find all centers that pass threshold
 % Store each line as a,b
-circles = zeros(0,2);
+circles = zeros(0,3);
 for i = 1:hough_y
     for j = 1:hough_x
-        if acc(i,j) >= threshold
-            circles = [circles; [j,i]];
+        for k = 1:hough_z
+            if acc(i,j,k) >= threshold
+                circles = [circles; [j,i,k+radius_start]];
+            end
         end
     end 
 end
@@ -75,8 +81,11 @@ imshow(imread('../images/image-1.png'));
 hold on;
 th = 0:pi/50:2*pi;
 for i = 1:size(circles)
-    xunit = radius * cos(th) + circles(i,1);
-    yunit = radius * sin(th) + circles(i,2);
+    x = circles(i,1);
+    y = circles(i,2);
+    r = circles(i,3);
+    xunit = r * cos(th) + x;
+    yunit = r * sin(th) + y;
     plot(xunit, yunit,'r-','LineWidth',3);
 end
 hold off;
