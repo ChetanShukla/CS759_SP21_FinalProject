@@ -1,4 +1,6 @@
 processed_images/
-**/.vs
 papers/
+output/
+
 **/*.asv
+**/.vs
