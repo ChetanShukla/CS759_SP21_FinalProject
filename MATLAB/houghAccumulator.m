@@ -8,16 +8,17 @@ if ~exist(output_folder_name, 'dir')
 end
 input_folder_name = '../processed_images/edges';
 
-
+im_name = '/image-3.png';
 % Read the image.
-input_img_name = strcat(input_folder_name,'/image-1.png');
+input_img_name = strcat(input_folder_name,im_name);
 img = imread(input_img_name);
 
 
 [y,x] = size(img);
-acc_size = x;
-radius_start = 20;
-radius_len = 20;
+shrink_factor = 4;
+acc_size = round(x/shrink_factor);
+radius_start = 20/shrink_factor;
+radius_len = 12/shrink_factor;
 % init the accumulator
 acc = zeros(acc_size, acc_size,radius_len);
 
@@ -27,8 +28,8 @@ for i = 1:y
         if img(i,j) > 0 %The pixel is part of an edge.
             for r = 1:radius_len
                 for t = 1:360 % Draw each circle in the accumulator space
-                    a = round(i-(radius_start+r)*sin(t*pi/180));
-                    b = round(j-(radius_start+r)*cos(t*pi/180));
+                    a = round(i/shrink_factor-(radius_start+r)*sin(t*pi/180));
+                    b = round(j/shrink_factor-(radius_start+r)*cos(t*pi/180));
                     % Gotta be within the range
                     if a > 0 && a <= acc_size && b > 0 && b<=acc_size
                         % Increment the value in the accumulator.
@@ -42,21 +43,24 @@ end
 
 % % To write the accumulator as an image, scale all values to be
 % % between 0 and 255. Max value in accumulator==255
-% white_balance = 255/max(max(acc));
-% for i = 1:acc_size
-%     for j = 1:acc_size
-%         % Scale value and round to int.
-%         acc(i,j) = round(acc(i,j) * white_balance);
+% white_balance = 255/max(max(max(acc)))
+% for z = 1:radius_len
+%     for i = 1:acc_size
+%         for j = 1:acc_size
+%             % Scale value and round to int.
+%             acc(i,j,z) = round(acc(i,j,z) * white_balance);
+%         end
 %     end
+%     % Write accumulator as an image
+%     output_img_name = strcat(output_folder_name,'/image-1_',num2str(z),'.png');
+%     imwrite(uint8(acc(:,:,z)), output_img_name);
 % end
-% 
-% % Write accumulator as an image
-% output_img_name = strcat(output_folder_name,'/image-1.png');
-% imwrite(uint8(acc), output_img_name);
+
+
 
 %Threshold at which we consider a point the center of a circle
 %threshold = 200;
-threshold = max(max(acc)) - 3 * mean(mean(acc(acc>0)));
+threshold = max(max(max(acc))) - 3 * mean(mean(mean(acc(acc>0))));
 
 [hough_y, hough_x, hough_z] = size(acc);
 
@@ -67,17 +71,50 @@ for i = 1:hough_y
     for j = 1:hough_x
         for k = 1:hough_z
             if acc(i,j,k) >= threshold
-                circles = [circles; [j,i,k+radius_start]];
+                circles = [circles; [j*shrink_factor,i*shrink_factor,(k+radius_start)*shrink_factor]];
             end
         end
     end 
 end
 
+circles_sorted = sortrows(circles,[1,2]);
+% Average lines that are basically the same.
+% This isn't needed but reduces noise significantly.
+circles_filtered = zeros(0,3);
+prev_circle = circles_sorted(1,:);
+sum_x = prev_circle(1);
+sum_y = prev_circle(2);
+sum_r = prev_circle(3);
+counter = 1;
+max_offset = 10;
+for i = 2:size(circles_sorted)
+    cur_circle = circles_sorted(i,:);
+    if abs(cur_circle(1)-prev_circle(1)) < max_offset && abs(cur_circle(2) - prev_circle(2))<max_offset
+        sum_x = sum_x + cur_circle(1);
+        sum_y = sum_y + cur_circle(2);
+        sum_r = sum_r + cur_circle(3);
+        counter = counter + 1;
+        prev_circle = cur_circle;
+    else
+        circles_filtered = [circles_filtered; [sum_x/counter, sum_y/counter, sum_r/counter]];
+        sum_x = cur_circle(1);
+        sum_y = cur_circle(2);
+        sum_r = cur_circle(3);
+        counter = 1;
+        prev_circle = cur_circle;
+    end
+    % Ensure the last line/lines average gets added
+    if i == size(circles_sorted,1)
+        circles_filtered = [circles_filtered; [sum_x/counter, sum_y/counter, sum_r/counter]];
+    end
+end
+
+circles = circles_filtered;
 
 % Create figure and show the image so that we can draw lines on top of it.
 fh = figure();
 figure(fh);
-imshow(imread('../images/image-1.png'));
+imshow(imread(strcat('../images',im_name)));
 hold on;
 th = 0:pi/50:2*pi;
 for i = 1:size(circles)
@@ -97,11 +134,11 @@ imwrite(uint8(circle_detected_img),'../output/bloodcells/image-1.png');
 
 % fh = figure();
 % subplot(2,2,1)
-% imshow(imread('../images/image-1.png'));
+% imshow(imread(strcat('../images', im_name)));
 % subplot(2,2,2)
-% imshow(imread('../processed_images/edges/image-1.png'));
-% subplot(2,2,3)
-% imshow(im2double(uint8(acc)));
+% imshow(imread(strcat('../processed_images/edges',im_name)));
+% % subplot(2,2,3)
+% % imshow(im2double(uint8(acc)));
 % subplot(2,2,4)
 % imshow(circle_detected_img);
 
