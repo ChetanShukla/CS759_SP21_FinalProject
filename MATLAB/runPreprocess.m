@@ -69,11 +69,16 @@ end
 function edge_detection()
 
 output_folder_name = '../processed_images/edges';
-
 % Create the output folder if it doesn't exist
 if ~exist(output_folder_name, 'dir')
    mkdir(output_folder_name)
 end
+
+binary_output_dir = strcat(output_folder_name,'/binary');
+if ~exist(binary_output_dir, 'dir')
+   mkdir(binary_output_dir)
+end
+
 input_folder_name = '../processed_images/segmented';
 for i = int16(1):int16(100)
 
@@ -90,6 +95,12 @@ for i = int16(1):int16(100)
     % Note: The output from edge is an image of logical type.
     % Here we cast it to double before saving it.
     imwrite(im2double(edge_img), output_img_name);
+    
+    % Create the binary output folder if it doesn't exist
+    binary_output_name = strcat(binary_output_dir,'/image-', num2str(i));
+    fid = fopen(binary_output_name, 'w');
+    fwrite(fid,edge_img);
+    fclose(fid);
 end
 
     
