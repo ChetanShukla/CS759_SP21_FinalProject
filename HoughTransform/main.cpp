@@ -66,8 +66,24 @@ int main()
 	const int threads_per_block = 256;
 	int num_blocks = (image_size * image_size + threads_per_block - 1) / threads_per_block;
 
+	// Start timer code
+	cudaEvent_t start;
+	cudaEvent_t stop;
+	cudaEventCreate(&start);
+	cudaEventCreate(&stop);
+	cudaEventRecord(start);
+
 	find_edge_points << <num_blocks, threads_per_block, threads_per_block * sizeof(uint8_t) >> > (dev_image, image_size, dev_edges, dev_edges_len);
-	hough << <1, 1 >> > (dev_edges, dev_edges_len);
+
+	// End timer code
+	cudaEventRecord(stop);
+	cudaEventSynchronize(stop);
+	// Get the elapsed time in milliseconds
+	float ms;
+	cudaEventElapsedTime(&ms, start, stop);
+	printf("Edge array creation: %.3fms", ms);
+
+	/*hough << <1, 1 >> > (dev_edges, dev_edges_len);*/
 	cudaDeviceSynchronize();
 
 	cudaFree(dev_image);

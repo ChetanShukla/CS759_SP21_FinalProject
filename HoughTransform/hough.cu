@@ -41,6 +41,6 @@ __global__ void find_edge_points(uint8_t* image, int image_size, uint8_t* edges,
 	}
 }
 
-__global__ void hough(uint8_t* edges, unsigned int* edges_len) {
-	int idk = 2;
-}
+//__global__ void hough(uint8_t* edges, unsigned int* edges_len) {
+//	int idk = 2;
+//}
