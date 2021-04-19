@@ -27,15 +27,21 @@ for i = 1:y
     for j = 1:x
         if img(i,j) > 0 %The pixel is part of an edge.
             for r = 1:radius_len
-                for t = 1:360 % Draw each circle in the accumulator space
+%                 holder=[];
+                for t = linspace(1,360,256) % Draw each circle in the accumulator space
                     a = round(i/shrink_factor-(radius_start+r)*sin(t*pi/180));
                     b = round(j/shrink_factor-(radius_start+r)*cos(t*pi/180));
+%                     holder = [holder; [a,b]];
                     % Gotta be within the range
                     if a > 0 && a <= acc_size && b > 0 && b<=acc_size
                         % Increment the value in the accumulator.
                         acc(a,b,r) = acc(a,b,r) + 1; 
                     end
                 end
+%                 [temp,~,ix] = unique(holder(:,1:2),'rows');
+%                 ix = accumarray(ix,1);
+%                 temp = [temp,ix];
+%                 breakpoint = 0;
             end
         end
     end
