@@ -24,13 +24,6 @@ int main()
 		return 0;
 	}
 
-	/*for (int i = 0; i < image_size; i++) {
-		for (int j = 0; j < image_size; j++) {
-			printf("%d, ", image[i * image_size + j]);
-		}
-		cout << endl;
-	}*/
-
 	cudaError_t cuda_stat;
 	uint8_t* dev_image;
 	uint8_t* dev_edges;
