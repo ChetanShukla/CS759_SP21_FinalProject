@@ -28,6 +28,9 @@ for i = 1:y
         if img(i,j) > 0 %The pixel is part of an edge.
             for r = 1:radius_len
 %                 holder=[];
+                % Lots of duplicate a,b values due to reduced accumulator
+                % mean that we can reduce the number of points we draw. 256
+                % fits nicely into a cuda kernel.
                 for t = linspace(1,360,256) % Draw each circle in the accumulator space
                     a = round(i/shrink_factor-(radius_start+r)*sin(t*pi/180));
                     b = round(j/shrink_factor-(radius_start+r)*cos(t*pi/180));
