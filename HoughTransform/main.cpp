@@ -73,7 +73,7 @@ int main()
 	cudaEventCreate(&stop);
 	cudaEventRecord(start);
 
-	find_edge_points << <num_blocks, threads_per_block, threads_per_block * sizeof(uint8_t) >> > (dev_image, image_size, dev_edges, dev_edges_len);
+	accumulate_edge_points << <num_blocks, threads_per_block, threads_per_block * sizeof(uint8_t) >> > (dev_image, image_size, dev_edges, dev_edges_len);
 
 	// End timer code
 	cudaEventRecord(stop);
@@ -81,14 +81,42 @@ int main()
 	// Get the elapsed time in milliseconds
 	float ms;
 	cudaEventElapsedTime(&ms, start, stop);
-	printf("Edge array creation: %.3fms", ms);
+	printf("Edge array creation: %.3fms\n", ms);
 
-	/*hough << <1, 1 >> > (dev_edges, dev_edges_len);*/
+	int* acc = new int[64 * 64 * 3];
+	int* dev_acc;
+	// allocate accumulator memory on the device(GPU)
+	cuda_stat = cudaMalloc((void**)&dev_acc, sizeof(int) * 64 * 64 * 3);
+	if (cuda_stat != cudaSuccess) {
+		printf("device accumulator memory allocation failed");
+		return EXIT_FAILURE;
+	}
+
+	hough << <1, 64 >> > (dev_edges, dev_edges_len, dev_acc);
+
+	// Get the accumulator from global memory
+	cuda_stat = cudaMemcpy(acc, dev_acc, sizeof(int) * 64 * 64 * 3, cudaMemcpyDeviceToHost);
+	if (cuda_stat != cudaSuccess) {
+		printf("Accumulator move to host failed");
+		return EXIT_FAILURE;
+	}
 	cudaDeviceSynchronize();
+
+	ofstream my_file_out("C:\\Users\\djkong7\\Documents\\GitHub\\CS759_SP21_FinalProject\\processed_images\\edges\\binary\\image-1-out", ios::out | ios::binary);
+	if (my_file_out.is_open()) {
+		my_file_out.write((char*)acc, sizeof(int) * 64 * 64 * 3);
+		my_file_out.close();
+	}
+	else {
+		cout << "Output file not opened";
+		return 0;
+	}
 
 	cudaFree(dev_image);
 	cudaFree(dev_edges);
 	cudaFree(dev_edges_len);
+	cudaFree(dev_acc);
 	delete[] image;
+	delete[] acc;
 	return 0;
 }

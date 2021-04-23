@@ -87,7 +87,7 @@ for i = 1:hough_y
 end
 
 circles_sorted = sortrows(circles,[1,2]);
-% Average lines that are basically the same.
+% Average circles that are basically the same.
 % This isn't needed but reduces noise significantly.
 circles_filtered = zeros(0,3);
 prev_circle = circles_sorted(1,:);
