@@ -16,103 +16,104 @@ Point::Point()
 	y = 0;
 }
 
-HashMap::HashMap(void)
-{
-	this->table = new Point*[503];
-}
 
-int HashMap::hash(Point *data)
-{
-	return ((data->x + 79) * (data->y + 37) * 19) + 102793;
-}
+// HashMap::HashMap(void)
+// {
+// 	this->table = new Point*[503];
+// }
 
-int HashMap::getSize(void)
-{
-	return this->size;
-}
+// int HashMap::hash(Point *data)
+// {
+// 	return ((data->x + 79) * (data->y + 37) * 19) + 102793;
+// }
 
-int HashMap::getCapacity(void)
-{
-	return this->capacity;
-}
+// int HashMap::getSize(void)
+// {
+// 	return this->size;
+// }
 
-// Checks if a pair of numbers is in the HashMap or not
-int HashMap::contains(int a, int b)
-{
-	Point *temp = new Point(a, b);
-	int hash = this->hash(temp);
+// int HashMap::getCapacity(void)
+// {
+// 	return this->capacity;
+// }
 
-	for (int i = 0; this->table[hash % this->capacity] != NULL; i++)
-	{
-		temp = this->table[hash % this->capacity];
-		if (temp->x == a && temp->y == b)
-			return 1;
-		else
-			hash += 2 * i + 1;
-	}
+// // Checks if a pair of numbers is in the HashMap or not
+// int HashMap::contains(int a, int b)
+// {
+// 	Point *temp = new Point(a, b);
+// 	int hash = this->hash(temp);
 
-	return 0;
-}
+// 	for (int i = 0; this->table[hash % this->capacity] != NULL; i++)
+// 	{
+// 		temp = this->table[hash % this->capacity];
+// 		if (temp->x == a && temp->y == b)
+// 			return 1;
+// 		else
+// 			hash += 2 * i + 1;
+// 	}
 
-// Inserts a pair of numbers into the HashMap
-void HashMap::insert(int a, int b)
-{
-	// Disallow duplicates
-	if (this->contains(a, b))
-		return;
+// 	return 0;
+// }
 
-	Point *newPoint = new Point(a, b);
-	int hash = this->hash(newPoint);
+// // Inserts a pair of numbers into the HashMap
+// void HashMap::insert(int a, int b)
+// {
+// 	// Disallow duplicates
+// 	if (this->contains(a, b))
+// 		return;
 
-	if (this->size > this->capacity / 2)
-		this->expand();
+// 	Point *newPoint = new Point(a, b);
+// 	int hash = this->hash(newPoint);
 
-	for (int i = 0; this->table[hash % this->capacity] != NULL; i++)
-		hash += 2 * i + 1;
+// 	if (this->size > this->capacity / 2)
+// 		this->expand();
 
-	this->table[hash % this->capacity] = newPoint;
-	this->size++;
+// 	for (int i = 0; this->table[hash % this->capacity] != NULL; i++)
+// 		hash += 2 * i + 1;
 
-	return;
-}
+// 	this->table[hash % this->capacity] = newPoint;
+// 	this->size++;
 
-// Expands the table
-void HashMap::expand(void)
-{
-	this->capacity = this->primes[++this->currentPrime];
-	Point **newTable = new Point*[this->capacity];
-	Point *temp;
+// 	return;
+// }
 
-	for (int i = 0; i < this->primes[this->currentPrime - 1]; i++)
-	{
-		temp = this->table[i];
-		if (temp == NULL)
-			continue; 
+// // Expands the table
+// void HashMap::expand(void)
+// {
+// 	this->capacity = this->primes[++this->currentPrime];
+// 	Point **newTable = new Point*[this->capacity];
+// 	Point *temp;
 
-		int hash = this->hash(temp);
+// 	for (int i = 0; i < this->primes[this->currentPrime - 1]; i++)
+// 	{
+// 		temp = this->table[i];
+// 		if (temp == NULL)
+// 			continue; 
 
-		newTable[hash % this->capacity] = temp;
+// 		int hash = this->hash(temp);
 
-	}
+// 		newTable[hash % this->capacity] = temp;
 
-	this->table = newTable;
-	return;
-}
+// 	}
 
-// I wrote this up to help debug the other functions listed above
-void HashMap::printTable(void)
-{
-	Point *temp;
+// 	this->table = newTable;
+// 	return;
+// }
 
-	for (int i = 0; i < this->size; i++)
-	{
-		temp = this->table[i];
-		if (temp == NULL)
-			cout << "NULL, ";
-		else
-			cout << "(" << temp->x << ", " << temp->y << "), ";
-	}
+// // I wrote this up to help debug the other functions listed above
+// void HashMap::printTable(void)
+// {
+// 	Point *temp;
 
-	cout << endl << "size is : " << this->size << " and capacity: " << this->capacity << endl;
-	return;
-}
+// 	for (int i = 0; i < this->size; i++)
+// 	{
+// 		temp = this->table[i];
+// 		if (temp == NULL)
+// 			cout << "NULL, ";
+// 		else
+// 			cout << "(" << temp->x << ", " << temp->y << "), ";
+// 	}
+
+// 	cout << endl << "size is : " << this->size << " and capacity: " << this->capacity << endl;
+// 	return;
+// }
