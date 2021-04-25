@@ -1,6 +1,6 @@
 #include "canny.hpp"
 #include "global.hpp"
-#include "HashMap.hpp"
+#include "hashmap.hpp"
 
 using namespace std;
 
