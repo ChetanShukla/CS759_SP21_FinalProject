@@ -3,6 +3,7 @@
 
 #include "hashmap.hpp"
 #include "global.hpp"
+#include <unordered_map>
 
 void magnitude_matrix(double **pic, double **mag, double **x, double **y);
 

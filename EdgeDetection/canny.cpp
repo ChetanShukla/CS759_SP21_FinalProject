@@ -1,6 +1,5 @@
 #include "canny.hpp"
 #include "global.hpp"
-#include <unordered_map>
 
 using namespace std;
 
