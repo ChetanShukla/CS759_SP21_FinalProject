@@ -1,7 +1,7 @@
 #ifndef CANNY_HPP
 #define CANNY_HPP
 
-#include "HashMap.hpp"
+#include "hashmap.hpp"
 #include "global.hpp"
 
 void magnitude_matrix(double **pic, double **mag, double **x, double **y);
