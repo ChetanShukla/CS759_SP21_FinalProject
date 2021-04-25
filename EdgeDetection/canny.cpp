@@ -1,5 +1,6 @@
 #include "canny.hpp"
 #include "global.hpp"
+#include <unordered_map>
 
 using namespace std;
 
@@ -76,13 +77,13 @@ void magnitude_matrix(double **pic, double **mag, double **x, double **y)
 }
 
 // ================================ Peaks Detection ================================
-// The formula for slope is Δy/Δx. We have Δy and Δx from the scanning convulution
+// The formula for slope is Δy/Δx. We have Δy and Δx from the scanning convolution
 // above. We can get the slope by dividing the two. We'll store all the points that
 // are greater than both it's neighbors in the direction of the slope into a vector.
 // We can calculate the direction of the slope using the tan(x) function. We'll also
 // store the peaks in a HashMap for O(1) searches in the recursiveDT function later.
 // ================================ Peaks Detection ================================
-vector<Point*> peak_detection(double **mag, HashMap *h, double **x, double **y)
+vector<Point*> peak_detection(double **mag, unordered_map<Point*, bool> peaks, double **x, double **y)
 {
 	double slope = 0;
 	vector<Point*> v;
@@ -95,38 +96,39 @@ vector<Point*> peak_detection(double **mag, HashMap *h, double **x, double **y)
 				x[i][j] = 0.0001;
 
 			slope = y[i][j] / x[i][j];
+            Point* givenPoint = new Point(i, j);
 
 			// We're only looking for the peaks. If we're at a peak, store 255 in 'peaks'
 			if (slope <= tan(22.5) && slope > tan(-22.5))
 			{
 				if (mag[i][j] > mag[i][j-1] && mag[i][j] > mag[i][j+1])
 				{
-					v.push_back(new Point(i, j));
-					h->insert(i, j);
+                    v.push_back(givenPoint);
+					peaks.insert(make_pair(givenPoint, true));
 				}
 			}
 			else if (slope <= tan(67.5) && slope > tan(22.5))
 			{
 				if (mag[i][j] > mag[i-1][j-1] && mag[i][j] > mag[i+1][j+1])
 				{
-					v.push_back(new Point(i, j));
-					h->insert(i, j);
+                    v.push_back(givenPoint);
+					peaks.insert(make_pair(givenPoint, true));
 				}
 			}
 			else if (slope <= tan(-22.5) && slope > tan(-67.5))
 			{
 				if (mag[i][j] > mag[i+1][j-1] && mag[i][j] > mag[i-1][j+1])
 				{
-					v.push_back(new Point(i, j));
-					h->insert(i, j);
+                    v.push_back(givenPoint);
+					peaks.insert(make_pair(givenPoint, true));
 				}
 			}
 			else
 			{
 				if (mag[i][j] > mag[i-1][j] && mag[i][j] > mag[i+1][j])
 				{
-					v.push_back(new Point(i, j));
-					h->insert(i, j);
+                    v.push_back(givenPoint);
+					peaks.insert(make_pair(givenPoint, true));
 				}
 			}
 		}
@@ -142,17 +144,19 @@ vector<Point*> peak_detection(double **mag, HashMap *h, double **x, double **y)
 // range and swith all those to ON in final. We'll stop as soon as all the pixels are
 // either already processed or less than the 'lo' threshold.
 // ======================== Hysteresis & Double Thresholding ========================
-void recursiveDT(double **mag, double **final, HashMap *h, HashMap *peaks, int a, int b, int flag)
+void recursiveDT(double **mag, double **final, unordered_map<Point*, bool> h, unordered_map<Point*, bool> peaks, int a, int b, int flag)
 {
 	// If the pixel value is < lo, out-of-bounds, or at a point we've visited before,
 	// then exit the funciton.
 	if (mag[a][b] < lo || a < 0 || b < 0 || a >= height || b >= width)
 		return;
-	if (h->contains(a, b))
+
+    Point* givenPoint = new Point(a, b);    
+	if (h.find(givenPoint) != h.end())
 		return;
 
 	// Insert the current pixel so we know we've been here before.
-	h->insert(a, b);
+	h.insert(make_pair(givenPoint, true));
 
 	// If flag = 0, that means that this is the first pixel of the "series" that
 	// we're looking at. We're going to look for a pixel in "final" that's set to
@@ -185,7 +189,8 @@ void recursiveDT(double **mag, double **final, HashMap *h, HashMap *peaks, int a
 		{
 			for (int q = -1; q <= 1; q++)
 			{
-				if (mag[a+p][b+q] >= lo && peaks->contains(a+p, b+q))
+                Point* currentPoint = new Point(a+p, b+q); 
+				if (mag[a+p][b+q] >= lo && peaks.find(currentPoint) != peaks.end())
 				{
 					recursiveDT(mag, final, h, peaks, a+p, b+q, 1);
 					final[a][b] = 255;
