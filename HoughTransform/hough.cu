@@ -1,5 +1,6 @@
 ﻿#include "hough.cuh"
 #include <fstream>
+#include <math_constants.h>
 using namespace std;
 
 __global__ void accumulate_edge_points(uint8_t* image, int image_size, uint8_t* edges, unsigned int* edges_len) {
@@ -24,8 +25,8 @@ __global__ void accumulate_edge_points(uint8_t* image, int image_size, uint8_t* 
 	if (pixel == 1) {
 		unsigned int write_ind = atomicAdd(sh_next, (unsigned int)2);
 		//Write the point to shared memory
-		sh_edges[write_ind] = image_x;
-		sh_edges[write_ind + 1] = image_y;
+		sh_edges[write_ind] = image_x + 1;
+		sh_edges[write_ind + 1] = image_y + 1;
 	}
 	__syncthreads();
 
@@ -44,7 +45,7 @@ __global__ void accumulate_edge_points(uint8_t* image, int image_size, uint8_t* 
 __global__ void hough(uint8_t* edges, unsigned int* edges_len, int* global_acc) {
 	//(Image_size/shrink)^2 * 3 different radius sizes
 	//(256/4) = 64
-	__shared__ int hough[64 * 64 * 3];
+	__shared__ unsigned int hough[64 * 64 * 3];
 
 	//for (int i = 0; i < 64; i++) {
 	//	for (int j = 0; j < 3; j++) {
@@ -58,18 +59,33 @@ __global__ void hough(uint8_t* edges, unsigned int* edges_len, int* global_acc) 
 
 	__syncthreads();
 
-	for (int k = threadIdx.x; k < *edges_len; k += blockDim.x) {
+	for (int k = threadIdx.x; k < (*edges_len) / 2; k += blockDim.x) {
 		uint8_t point_x = edges[k * 2];
 		uint8_t point_y = edges[k * 2 + 1];
 
-		for (int i = 0; i < 360; i++) {
-			float sin_result = sinpif(((float)i) / 180);
-			float cos_result = cospif(((float)i) / 180);
+		float shrunk_y = (float)point_y / 4;
+		float shrunk_x = (float)point_x / 4;
+
+		/*if (k == 0) {
+			printf("POINT: %d,%d\n", point_x, point_y);
+		}*/
+
+		for (int i = 1; i < 361; i++) {
+			float sin_result = sinf((i * CUDART_PI_F) / 180);
+			float cos_result = cosf((i * CUDART_PI_F) / 180);
+
 			for (int j = 1; j <= 3; j++) {
-				int a = round(point_y / 4 - (5 + j) * sin_result);
-				int b = round(point_x / 4 - (5 + j) * cos_result);
+				int a = round(shrunk_x - (5 + j) * sin_result);
+				int b = round(shrunk_y - (5 + j) * cos_result);
+				/*if (k == 0 && j == 1) {
+					printf("%d,%d\n", a, b);
+				}*/
+				/*if (a == 6 && b == 0 && j == 1) {
+					printf("%d", 1);
+				}*/
 				if (0 <= a && a < 64 && 0 <= b && b < 64) {
-					atomicAdd(&hough[a * 64 + b * 64 + j], (int)1);
+					atomicAdd(&hough[a + b * 64 + 64 * 64 * (j - 1)], (unsigned int)1);
+					//hough[a + b * 64 + 64 * 64 * (j - 1)] += 1;
 				}
 			}
 		}
