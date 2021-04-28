@@ -1,5 +1,5 @@
 #include "global.hpp"
-#include "hashmap.hpp"
+#include "point.hpp"
 
 using namespace std;
 

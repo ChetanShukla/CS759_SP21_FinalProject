@@ -1,7 +1,7 @@
 #ifndef CANNY_HPP
 #define CANNY_HPP
 
-#include "hashmap.hpp"
+#include "point.hpp"
 #include "global.hpp"
 #include <unordered_map>
 
