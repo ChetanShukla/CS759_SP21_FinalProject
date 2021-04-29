@@ -48,8 +48,9 @@ __global__ void accumulate_edge_points(uint8_t* image, int image_size, uint8_t* 
 __global__ void hough(uint8_t* edges_x, uint8_t* edges_y, unsigned int* edges_len, int* global_acc) {
 	// (Image_size/shrink)^2 * 3 different radius sizes
 	// (256/4) = 64 so 64^2*3
-	// Scary since this is max shared memory size. Would love to move this to uint16_t if
-	// half precision atomic add was available on maxwell.
+	// Scary since this is max shared memory size. Would love to move this to __half if
+	// half precision atomic add was available on maxwell. Need at least Volta though.
+	// Would open up the opportunity to precompute the sin and cos values and store in shared.
 	__shared__ unsigned int hough[64 * 64 * 3];
 
 	//Initialize shared memory.
@@ -61,12 +62,12 @@ __global__ void hough(uint8_t* edges_x, uint8_t* edges_y, unsigned int* edges_le
 	for (int k = threadIdx.x; k < (*edges_len); k += blockDim.x) {
 		// Pull in from global memory.
 		// Coalesced and aligned for the win.
-		uint8_t point_x = edges_x[k];
-		uint8_t point_y = edges_y[k];
+		float point_x = edges_x[k] / 4.0;
+		float point_y = edges_y[k] / 4.0;
 
 		// Shrink the image points to fit in the accumulator space.
-		float shrunk_x = (float)point_x / 4;
-		float shrunk_y = (float)point_y / 4;
+		/*float shrunk_x = (float)point_x / 4;
+		float shrunk_y = (float)point_y / 4;*/
 
 		for (int i = 0; i < 360; i++) {
 			// Sin and cos seem to be the big players in the speed of this function
@@ -77,15 +78,14 @@ __global__ void hough(uint8_t* edges_x, uint8_t* edges_y, unsigned int* edges_le
 			float cos_result = __cosf((i * CUDART_PI_F) / 180.0);
 
 			for (int j = 0; j < 3; j++) {
-				int a = round(shrunk_y - (6 + j) * sin_result);
-				int b = round(shrunk_x - (6 + j) * cos_result);
+				int a = round(point_y - (6 + j) * sin_result);
+				int b = round(point_x - (6 + j) * cos_result);
 				if (0 <= a && a < 64 && 0 <= b && b < 64) {
 					atomicAdd(&hough[a + b * 64 + 64 * 64 * j], (unsigned int)1);
 				}
 			}
 		}
 	}
-
 	__syncthreads();
 
 	//Write the accumulator out to global memory.

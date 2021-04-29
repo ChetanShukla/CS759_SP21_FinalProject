@@ -16,7 +16,11 @@ int main()
 	uint8_t* image = new uint8_t[image_size * image_size];
 	float accumulate_time = 0.0;
 	float hough_time = 0.0;
-	int num_images = 10;
+	int num_images = 100;
+
+	cudaDeviceProp deviceProp;
+	cudaGetDeviceProperties(&deviceProp, dev);
+	std::printf("%d.%d\n", deviceProp.major, deviceProp.minor);
 
 	for (int z = 1; z <= num_images; z++) {
 		ifstream my_file("C:\\Users\\djkong7\\Documents\\GitHub\\CS759_SP21_FinalProject\\processed_images\\edges\\binary\\image-" + to_string(z), ios::in | ios::binary);
