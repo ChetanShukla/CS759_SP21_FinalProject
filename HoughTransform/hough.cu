@@ -3,46 +3,50 @@
 #include <math_constants.h>
 using namespace std;
 
-__global__ void accumulate_edge_points(uint8_t* image, int image_size, uint8_t* edges, unsigned int* edges_len) {
+__global__ void accumulate_edge_points(uint8_t* image, int image_size, uint8_t* edges_x, uint8_t* edges_y, unsigned int* edges_len) {
 	//Setup shared memory variables
-	extern __shared__ uint8_t sh_mem[];
-	unsigned int* sh_next = (unsigned int*)sh_mem;
-	unsigned int* sh_global_write = (unsigned int*)(sh_mem + 4);
-	uint8_t* sh_edges = sh_mem + 8;
+	//extern __shared__ uint8_t sh_mem[];
+	__shared__ unsigned int sh_next;
+	__shared__ unsigned int sh_global_write;
+	__shared__ uint8_t sh_edges_x[256];
+	__shared__ uint8_t sh_edges_y[256];
 
 	//Initialize shared memory
 	if (threadIdx.x == 0) {
-		*sh_next = 0;
+		sh_next = 0;
 	}
 	__syncthreads();
 
-	int image_x = threadIdx.x;
-	int image_y = blockIdx.x;
+	uint8_t image_x = threadIdx.x;
+	uint8_t image_y = blockIdx.x;
 
 	//Bring in the proper pixel from global memory
 	int pixel = image[image_y * image_size + image_x];
 	//If the pixel is part of an edge
 	if (pixel == 1) {
-		unsigned int write_ind = atomicAdd(sh_next, (unsigned int)2);
+		unsigned int write_ind = atomicAdd(&sh_next, (unsigned int)1);
 		//Write the point to shared memory
-		sh_edges[write_ind] = image_x + 1;
-		sh_edges[write_ind + 1] = image_y + 1;
+		//Swap x and y b/c the image is really stored columnwise from the MATLAB
+		//binary image export.
+		sh_edges_x[write_ind] = image_y;
+		sh_edges_y[write_ind] = image_x;
 	}
 	__syncthreads();
 
 	//Figure out where we need to start writing our portion in global memory
 	if (threadIdx.x == 0) {
-		*sh_global_write = atomicAdd(edges_len, *sh_next);
+		sh_global_write = atomicAdd(edges_len, sh_next);
 	}
 	__syncthreads();
 
 	//Write our shared memory to global memory
-	if (threadIdx.x < *sh_next) {
-		edges[*sh_global_write + threadIdx.x] = sh_edges[threadIdx.x];
+	if (threadIdx.x < sh_next) {
+		edges_x[sh_global_write + threadIdx.x] = sh_edges_x[threadIdx.x];
+		edges_y[sh_global_write + threadIdx.x] = sh_edges_y[threadIdx.x];
 	}
 }
 
-__global__ void hough(uint8_t* edges, unsigned int* edges_len, int* global_acc) {
+__global__ void hough(uint8_t* edges_x, uint8_t* edges_y, unsigned int* edges_len, int* global_acc) {
 	//(Image_size/shrink)^2 * 3 different radius sizes
 	//(256/4) = 64
 	__shared__ unsigned int hough[64 * 64 * 3];
@@ -59,12 +63,12 @@ __global__ void hough(uint8_t* edges, unsigned int* edges_len, int* global_acc) 
 
 	__syncthreads();
 
-	for (int k = threadIdx.x; k < (*edges_len) / 2; k += blockDim.x) {
-		uint8_t point_x = edges[k * 2];
-		uint8_t point_y = edges[k * 2 + 1];
+	for (int k = threadIdx.x; k < (*edges_len); k += blockDim.x) {
+		uint8_t point_x = edges_x[k];
+		uint8_t point_y = edges_y[k];
 
-		float shrunk_y = (float)point_y / 4;
 		float shrunk_x = (float)point_x / 4;
+		float shrunk_y = (float)point_y / 4;
 
 		/*if (k == 0) {
 			printf("POINT: %d,%d\n", point_x, point_y);
@@ -75,8 +79,8 @@ __global__ void hough(uint8_t* edges, unsigned int* edges_len, int* global_acc) 
 			float cos_result = cosf((i * CUDART_PI_F) / 180);
 
 			for (int j = 1; j <= 3; j++) {
-				int a = round(shrunk_x - (5 + j) * sin_result);
-				int b = round(shrunk_y - (5 + j) * cos_result);
+				int a = round(shrunk_y - (5 + j) * sin_result);
+				int b = round(shrunk_x - (5 + j) * cos_result);
 				/*if (k == 0 && j == 1) {
 					printf("%d,%d\n", a, b);
 				}*/

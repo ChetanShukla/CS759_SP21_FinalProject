@@ -31,7 +31,8 @@ int main()
 
 		cudaError_t cuda_stat;
 		uint8_t* dev_image;
-		uint8_t* dev_edges;
+		uint8_t* dev_edges_x;
+		uint8_t* dev_edges_y;
 		unsigned int* dev_edges_len;
 
 		// allocate image memory on the device(GPU)
@@ -49,7 +50,14 @@ int main()
 		}
 
 		// allocate edges memory on the device(GPU)
-		cuda_stat = cudaMalloc((void**)&dev_edges, sizeof(uint8_t) * image_size * image_size);
+		cuda_stat = cudaMalloc((void**)&dev_edges_x, sizeof(uint8_t) * image_size * image_size);
+		if (cuda_stat != cudaSuccess) {
+			printf("device edges memory allocation failed");
+			return EXIT_FAILURE;
+		}
+
+		// allocate edges memory on the device(GPU)
+		cuda_stat = cudaMalloc((void**)&dev_edges_y, sizeof(uint8_t) * image_size * image_size);
 		if (cuda_stat != cudaSuccess) {
 			printf("device edges memory allocation failed");
 			return EXIT_FAILURE;
@@ -78,7 +86,7 @@ int main()
 		cudaEventCreate(&stop);
 		cudaEventRecord(start);
 
-		accumulate_edge_points << <num_blocks, threads_per_block, threads_per_block * sizeof(uint8_t) >> > (dev_image, image_size, dev_edges, dev_edges_len);
+		accumulate_edge_points << <num_blocks, threads_per_block >> > (dev_image, image_size, dev_edges_x, dev_edges_y, dev_edges_len);
 
 		// End timer code
 		cudaEventRecord(stop);
@@ -103,7 +111,7 @@ int main()
 		cudaEventCreate(&stop);
 		cudaEventRecord(start);
 
-		hough << <1, 1024 >> > (dev_edges, dev_edges_len, dev_acc);
+		hough << <1, 1024 >> > (dev_edges_x, dev_edges_y, dev_edges_len, dev_acc);
 
 		// End timer code
 		cudaEventRecord(stop);
@@ -132,7 +140,8 @@ int main()
 		}
 
 		cudaFree(dev_image);
-		cudaFree(dev_edges);
+		cudaFree(dev_edges_x);
+		cudaFree(dev_edges_y);
 		cudaFree(dev_edges_len);
 		cudaFree(dev_acc);
 		delete[] acc;
