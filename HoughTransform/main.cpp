@@ -18,10 +18,6 @@ int main()
 	float hough_time = 0.0;
 	int num_images = 100;
 
-	cudaDeviceProp deviceProp;
-	cudaGetDeviceProperties(&deviceProp, dev);
-	std::printf("%d.%d\n", deviceProp.major, deviceProp.minor);
-
 	for (int z = 1; z <= num_images; z++) {
 		ifstream my_file("C:\\Users\\djkong7\\Documents\\GitHub\\CS759_SP21_FinalProject\\processed_images\\edges\\binary\\image-" + to_string(z), ios::in | ios::binary);
 		if (my_file.is_open()) {
@@ -115,7 +111,7 @@ int main()
 		cudaEventCreate(&stop);
 		cudaEventRecord(start);
 
-		hough << <1, 1024 >> > (dev_edges_x, dev_edges_y, dev_edges_len, dev_acc);
+		hough << <3, 1024 >> > (dev_edges_x, dev_edges_y, dev_edges_len, dev_acc);
 
 		// End timer code
 		cudaEventRecord(stop);
