@@ -58,7 +58,6 @@ end
 
 % To write the accumulator as an image, scale all values to be
 % between 0 and 255. Set max value in accumulator==255
-max(max(max(acc)))
 acc = rescale(acc,0,255);
 for z = 1:radius_len
     % Write accumulator as an image
@@ -67,7 +66,7 @@ for z = 1:radius_len
 end
 
 
-file = fopen('../processed_images/edges/binary/image-1-out');
+file = fopen('../processed_images/hough/binary/image-1-out');
 cuda_acc_1 = fread(file,[64,64], 'int32');
 cuda_acc_2 = fread(file,[64,64], 'int32');
 cuda_acc_3 = fread(file,[64,64], 'int32');
