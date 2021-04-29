@@ -58,7 +58,7 @@ __global__ void hough(uint8_t* edges_x, uint8_t* edges_y, unsigned int* edges_le
 		sh_hough[i] = 0;
 	}
 
-	//Precomputed sin and cos values.
+	//Precompute sin and cos values.
 	float spacing = 360.0 / NUM_DEGREE_CALC;
 	for (int i = threadIdx.x; i < NUM_DEGREE_CALC; i += blockDim.x) {
 		// The ability to use fast math here is advantagous over alternatives for

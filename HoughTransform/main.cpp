@@ -15,6 +15,51 @@ int main()
 	float hough_time = 0.0;
 	int num_images = 100;
 
+	cudaError_t cuda_stat;
+	uint8_t* dev_image;
+	uint8_t* dev_edges_x;
+	uint8_t* dev_edges_y;
+	unsigned int* dev_edges_len;
+	int* acc = new int[64 * 64 * 3];
+	int* dev_acc;
+
+	// allocate image memory on the device(GPU)
+	cuda_stat = cudaMalloc((void**)&dev_image, sizeof(uint8_t) * image_size * image_size);
+	if (cuda_stat != cudaSuccess) {
+		printf("device image memory allocation failed");
+		return EXIT_FAILURE;
+	}
+
+	// allocate edges x memory on the device(GPU)
+	cuda_stat = cudaMalloc((void**)&dev_edges_x, sizeof(uint8_t) * image_size * image_size);
+	if (cuda_stat != cudaSuccess) {
+		printf("device edges x memory allocation failed");
+		return EXIT_FAILURE;
+	}
+
+	// allocate edges y memory on the device(GPU)
+	cuda_stat = cudaMalloc((void**)&dev_edges_y, sizeof(uint8_t) * image_size * image_size);
+	if (cuda_stat != cudaSuccess) {
+		printf("device edges y memory allocation failed");
+		return EXIT_FAILURE;
+	}
+
+	// allocate edges length memory on the device(GPU)
+	cuda_stat = cudaMalloc((void**)&dev_edges_len, sizeof(int));
+	if (cuda_stat != cudaSuccess) {
+		printf("device edges length memory allocation failed");
+		return EXIT_FAILURE;
+	}
+
+	// allocate accumulator memory on the device(GPU)
+	cuda_stat = cudaMalloc((void**)&dev_acc, sizeof(int) * 64 * 64 * 3);
+	if (cuda_stat != cudaSuccess) {
+		printf("device accumulator memory allocation failed");
+		return EXIT_FAILURE;
+	}
+
+	const int threads_per_block = 256;
+
 	for (int z = 1; z <= num_images; z++) {
 		ifstream my_file("C:\\Users\\djkong7\\Documents\\GitHub\\CS759_SP21_FinalProject\\processed_images\\edges\\binary\\image-" + to_string(z), ios::in | ios::binary);
 		if (my_file.is_open()) {
@@ -26,19 +71,6 @@ int main()
 			return 0;
 		}
 
-		cudaError_t cuda_stat;
-		uint8_t* dev_image;
-		uint8_t* dev_edges_x;
-		uint8_t* dev_edges_y;
-		unsigned int* dev_edges_len;
-
-		// allocate image memory on the device(GPU)
-		cuda_stat = cudaMalloc((void**)&dev_image, sizeof(uint8_t) * image_size * image_size);
-		if (cuda_stat != cudaSuccess) {
-			printf("device image memory allocation failed");
-			return EXIT_FAILURE;
-		}
-
 		// put the image on the device
 		cuda_stat = cudaMemcpy(dev_image, image, sizeof(uint8_t) * image_size * image_size, cudaMemcpyHostToDevice);
 		if (cuda_stat != cudaSuccess) {
@@ -46,26 +78,6 @@ int main()
 			return EXIT_FAILURE;
 		}
 
-		// allocate edges memory on the device(GPU)
-		cuda_stat = cudaMalloc((void**)&dev_edges_x, sizeof(uint8_t) * image_size * image_size);
-		if (cuda_stat != cudaSuccess) {
-			printf("device edges memory allocation failed");
-			return EXIT_FAILURE;
-		}
-
-		// allocate edges memory on the device(GPU)
-		cuda_stat = cudaMalloc((void**)&dev_edges_y, sizeof(uint8_t) * image_size * image_size);
-		if (cuda_stat != cudaSuccess) {
-			printf("device edges memory allocation failed");
-			return EXIT_FAILURE;
-		}
-
-		// allocate edges length memory on the device(GPU)
-		cuda_stat = cudaMalloc((void**)&dev_edges_len, sizeof(int));
-		if (cuda_stat != cudaSuccess) {
-			printf("device edges length memory allocation failed");
-			return EXIT_FAILURE;
-		}
 		// Initialize the global points length to 0
 		cuda_stat = cudaMemset((void*)dev_edges_len, 0, sizeof(int));
 		if (cuda_stat != cudaSuccess) {
@@ -73,7 +85,6 @@ int main()
 			return EXIT_FAILURE;
 		}
 
-		const int threads_per_block = 256;
 		int num_blocks = (image_size * image_size + threads_per_block - 1) / threads_per_block;
 
 		// Start timer code
@@ -94,15 +105,6 @@ int main()
 		//printf("Edge array creation: %.3fms\n", ms);
 		accumulate_time += ms;
 
-		int* acc = new int[64 * 64 * 3];
-		int* dev_acc;
-		// allocate accumulator memory on the device(GPU)
-		cuda_stat = cudaMalloc((void**)&dev_acc, sizeof(int) * 64 * 64 * 3);
-		if (cuda_stat != cudaSuccess) {
-			printf("device accumulator memory allocation failed");
-			return EXIT_FAILURE;
-		}
-
 		// Start timer code
 		cudaEventCreate(&start);
 		cudaEventCreate(&stop);
@@ -118,7 +120,9 @@ int main()
 		//printf("Hough accumulation: %.3fms\n", ms);
 		hough_time += ms;
 
+		//Here just for testing.
 		cudaDeviceSynchronize();
+
 		// Get the accumulator from global memory
 		cuda_stat = cudaMemcpy(acc, dev_acc, sizeof(int) * 64 * 64 * 3, cudaMemcpyDeviceToHost);
 		if (cuda_stat != cudaSuccess) {
@@ -135,14 +139,13 @@ int main()
 			cout << "Output file not opened\n";
 			return 0;
 		}
-
-		cudaFree(dev_image);
-		cudaFree(dev_edges_x);
-		cudaFree(dev_edges_y);
-		cudaFree(dev_edges_len);
-		cudaFree(dev_acc);
-		delete[] acc;
 	}
+	cudaFree(dev_image);
+	cudaFree(dev_edges_x);
+	cudaFree(dev_edges_y);
+	cudaFree(dev_edges_len);
+	cudaFree(dev_acc);
+	delete[] acc;
 	delete[] image;
 
 	printf("Average edge array creation: %.3fms\n", accumulate_time / num_images);
