@@ -70,26 +70,15 @@ __global__ void hough(uint8_t* edges_x, uint8_t* edges_y, unsigned int* edges_le
 		float shrunk_x = (float)point_x / 4;
 		float shrunk_y = (float)point_y / 4;
 
-		/*if (k == 0) {
-			printf("POINT: %d,%d\n", point_x, point_y);
-		}*/
+		for (int i = 0; i < 360; i++) {
+			float sin_result = __sinf((i * CUDART_PI_F) / 180);
+			float cos_result = __cosf((i * CUDART_PI_F) / 180);
 
-		for (int i = 1; i < 361; i++) {
-			float sin_result = sinf((i * CUDART_PI_F) / 180);
-			float cos_result = cosf((i * CUDART_PI_F) / 180);
-
-			for (int j = 1; j <= 3; j++) {
-				int a = round(shrunk_y - (5 + j) * sin_result);
-				int b = round(shrunk_x - (5 + j) * cos_result);
-				/*if (k == 0 && j == 1) {
-					printf("%d,%d\n", a, b);
-				}*/
-				/*if (a == 6 && b == 0 && j == 1) {
-					printf("%d", 1);
-				}*/
+			for (int j = 0; j < 3; j++) {
+				int a = round(shrunk_y - (6 + j) * sin_result);
+				int b = round(shrunk_x - (6 + j) * cos_result);
 				if (0 <= a && a < 64 && 0 <= b && b < 64) {
-					atomicAdd(&hough[a + b * 64 + 64 * 64 * (j - 1)], (unsigned int)1);
-					//hough[a + b * 64 + 64 * 64 * (j - 1)] += 1;
+					atomicAdd(&hough[a + b * 64 + 64 * 64 * j], (unsigned int)1);
 				}
 			}
 		}
