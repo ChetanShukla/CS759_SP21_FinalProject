@@ -71,7 +71,7 @@ __global__ void hough(uint8_t* edges_x, uint8_t* edges_y, unsigned int* edges_le
 		float point_y = edges_y[k] / 4.0;
 
 		// Draw each circle in the accumulator.
-		for (int i = 0; i < 360; i++) {
+		for (int i = 0; i < NUM_DEGREE_CALC; i++) {
 			int a = round(point_y - (6 + blockIdx.x) * sh_sin[i]);
 			int b = round(point_x - (6 + blockIdx.x) * sh_cos[i]);
 			if (0 <= a && a < 64 && 0 <= b && b < 64) {
