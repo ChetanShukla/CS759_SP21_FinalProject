@@ -5,7 +5,6 @@ using namespace std;
 
 __global__ void accumulate_edge_points(uint8_t* image, int image_size, uint8_t* edges_x, uint8_t* edges_y, unsigned int* edges_len) {
 	//Setup shared memory variables
-	//extern __shared__ uint8_t sh_mem[];
 	__shared__ unsigned int sh_next;
 	__shared__ unsigned int sh_global_write;
 	__shared__ uint8_t sh_edges_x[256];
@@ -47,30 +46,33 @@ __global__ void accumulate_edge_points(uint8_t* image, int image_size, uint8_t* 
 }
 
 __global__ void hough(uint8_t* edges_x, uint8_t* edges_y, unsigned int* edges_len, int* global_acc) {
-	//(Image_size/shrink)^2 * 3 different radius sizes
-	//(256/4) = 64
+	// (Image_size/shrink)^2 * 3 different radius sizes
+	// (256/4) = 64 so 64^2*3
+	// Scary since this is max shared memory size. Would love to move this to uint16_t if
+	// half precision atomic add was available on maxwell.
 	__shared__ unsigned int hough[64 * 64 * 3];
 
-	//for (int i = 0; i < 64; i++) {
-	//	for (int j = 0; j < 3; j++) {
-	//		hough[threadIdx.x * 64 + i * 64 + j];
-	//	}
-	//}
-
+	//Initialize shared memory.
 	for (int i = threadIdx.x; i < 64 * 64 * 3; i += blockDim.x) {
 		hough[i] = 0;
 	}
-
 	__syncthreads();
 
 	for (int k = threadIdx.x; k < (*edges_len); k += blockDim.x) {
+		// Pull in from global memory.
+		// Coalesced and aligned for the win.
 		uint8_t point_x = edges_x[k];
 		uint8_t point_y = edges_y[k];
 
+		// Shrink the image points to fit in the accumulator space.
 		float shrunk_x = (float)point_x / 4;
 		float shrunk_y = (float)point_y / 4;
 
 		for (int i = 0; i < 360; i++) {
+			// Sin and cos seem to be the big players in the speed of this function
+			// due to the limited number of SFU's.
+			// The ability to use fast math here is advantagous over alternatives for
+			// sin and cos in degree mode such as sincospif()
 			float sin_result = __sinf((i * CUDART_PI_F) / 180.0);
 			float cos_result = __cosf((i * CUDART_PI_F) / 180.0);
 
@@ -86,6 +88,7 @@ __global__ void hough(uint8_t* edges_x, uint8_t* edges_y, unsigned int* edges_le
 
 	__syncthreads();
 
+	//Write the accumulator out to global memory.
 	for (int i = threadIdx.x; i < 64 * 64 * 3; i += blockDim.x) {
 		global_acc[i] = hough[i];
 	}
