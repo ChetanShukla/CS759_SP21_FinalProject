@@ -71,8 +71,8 @@ __global__ void hough(uint8_t* edges_x, uint8_t* edges_y, unsigned int* edges_le
 		float shrunk_y = (float)point_y / 4;
 
 		for (int i = 0; i < 360; i++) {
-			float sin_result = __sinf((i * CUDART_PI_F) / 180);
-			float cos_result = __cosf((i * CUDART_PI_F) / 180);
+			float sin_result = __sinf((i * CUDART_PI_F) / 180.0);
+			float cos_result = __cosf((i * CUDART_PI_F) / 180.0);
 
 			for (int j = 0; j < 3; j++) {
 				int a = round(shrunk_y - (6 + j) * sin_result);
