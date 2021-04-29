@@ -45,14 +45,21 @@ __global__ void accumulate_edge_points(uint8_t* image, int image_size, uint8_t* 
 	}
 }
 
-__global__ void hough(uint8_t* edges_x, uint8_t* edges_y, unsigned int* edges_len, int* global_acc) {
+__global__ void hough(uint8_t* edges_x, uint8_t* edges_y, unsigned int* edges_len, float* global_sin, float* global_cos, int* global_acc) {
 	// (Image_size/shrink)^2
 	// (256/4) = 64 so 64^2
-	__shared__ unsigned int hough[64 * 64];
+	__shared__ unsigned int sh_hough[64 * 64];
+	__shared__ float sh_sin[NUM_DEGREE_CALC];
+	__shared__ float sh_cos[NUM_DEGREE_CALC];
 
-	//Initialize shared memory.
+	//Initialize shared memory accumulator.
 	for (int i = threadIdx.x; i < 64 * 64; i += blockDim.x) {
-		hough[i] = 0;
+		sh_hough[i] = 0;
+	}
+	//Pull in precomputed sin and cos values from global.
+	for (int i = threadIdx.x; i < NUM_DEGREE_CALC; i += blockDim.x) {
+		sh_sin[i] = global_sin[i];
+		sh_cos[i] = global_cos[i];
 	}
 	__syncthreads();
 
@@ -63,16 +70,12 @@ __global__ void hough(uint8_t* edges_x, uint8_t* edges_y, unsigned int* edges_le
 		float point_x = edges_x[k] / 4.0;
 		float point_y = edges_y[k] / 4.0;
 
+		// Draw each circle in the accumulator.
 		for (int i = 0; i < 360; i++) {
-			// The ability to use fast math here is advantagous over alternatives for
-			// sin and cos in degree mode such as sincospif()
-			float sin_result = __sinf((i * CUDART_PI_F) / 180.0);
-			float cos_result = __cosf((i * CUDART_PI_F) / 180.0);
-
-			int a = round(point_y - (6 + blockIdx.x) * sin_result);
-			int b = round(point_x - (6 + blockIdx.x) * cos_result);
+			int a = round(point_y - (6 + blockIdx.x) * sh_sin[i]);
+			int b = round(point_x - (6 + blockIdx.x) * sh_cos[i]);
 			if (0 <= a && a < 64 && 0 <= b && b < 64) {
-				atomicAdd(&hough[a + b * 64], (unsigned int)1);
+				atomicAdd(&sh_hough[a + b * 64], (unsigned int)1);
 			}
 		}
 	}
@@ -81,6 +84,6 @@ __global__ void hough(uint8_t* edges_x, uint8_t* edges_y, unsigned int* edges_le
 	//Write the accumulator out to global memory.
 	int global_offset = 64 * 64 * blockIdx.x;
 	for (int i = threadIdx.x; i < 64 * 64; i += blockDim.x) {
-		global_acc[global_offset + i] = hough[i];
+		global_acc[global_offset + i] = sh_hough[i];
 	}
 }

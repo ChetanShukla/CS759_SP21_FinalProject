@@ -79,9 +79,11 @@
   <ItemGroup>
     <CudaCompile Include="hough.cu" />
     <CudaCompile Include="main.cpp" />
+    <CudaCompile Include="trig.cu" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="hough.cuh" />
+    <ClInclude Include="trig.cuh" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
