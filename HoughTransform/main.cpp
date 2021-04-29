@@ -103,42 +103,12 @@ int main()
 			return EXIT_FAILURE;
 		}
 
-		float* dev_sin, * dev_cos;
-
-		// allocate precomputed sin memory on the device(GPU)
-		cuda_stat = cudaMalloc((void**)&dev_sin, sizeof(float) * NUM_DEGREE_CALC);
-		if (cuda_stat != cudaSuccess) {
-			printf("device precomputed sin memory allocation failed");
-			return EXIT_FAILURE;
-		}
-
-		// allocate precomputed cos memory on the device(GPU)
-		cuda_stat = cudaMalloc((void**)&dev_cos, sizeof(float) * NUM_DEGREE_CALC);
-		if (cuda_stat != cudaSuccess) {
-			printf("device precomputed cos memory allocation failed");
-			return EXIT_FAILURE;
-		}
-
-		// put precomputed sin on the device
-		cuda_stat = cudaMemcpy(dev_sin, sin_bits, sizeof(int) * NUM_DEGREE_CALC, cudaMemcpyHostToDevice);
-		if (cuda_stat != cudaSuccess) {
-			printf("precomputed sin move to device failed");
-			return EXIT_FAILURE;
-		}
-
-		// put precomputed cos on the device
-		cuda_stat = cudaMemcpy(dev_cos, cos_bits, sizeof(int) * NUM_DEGREE_CALC, cudaMemcpyHostToDevice);
-		if (cuda_stat != cudaSuccess) {
-			printf("precomputed cos move to device failed");
-			return EXIT_FAILURE;
-		}
-
 		// Start timer code
 		cudaEventCreate(&start);
 		cudaEventCreate(&stop);
 		cudaEventRecord(start);
 
-		hough << <3, 1024 >> > (dev_edges_x, dev_edges_y, dev_edges_len, dev_sin, dev_cos, dev_acc);
+		hough << <3, 1024 >> > (dev_edges_x, dev_edges_y, dev_edges_len, dev_acc);
 
 		// End timer code
 		cudaEventRecord(stop);

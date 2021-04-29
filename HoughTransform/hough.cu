@@ -1,6 +1,7 @@
 ﻿#include "hough.cuh"
 #include <fstream>
 #include <math_constants.h>
+#define NUM_DEGREE_CALC 256
 using namespace std;
 
 __global__ void accumulate_edge_points(uint8_t* image, int image_size, uint8_t* edges_x, uint8_t* edges_y, unsigned int* edges_len) {
@@ -45,7 +46,7 @@ __global__ void accumulate_edge_points(uint8_t* image, int image_size, uint8_t* 
 	}
 }
 
-__global__ void hough(uint8_t* edges_x, uint8_t* edges_y, unsigned int* edges_len, float* global_sin, float* global_cos, int* global_acc) {
+__global__ void hough(uint8_t* edges_x, uint8_t* edges_y, unsigned int* edges_len, int* global_acc) {
 	// (Image_size/shrink)^2
 	// (256/4) = 64 so 64^2
 	__shared__ unsigned int sh_hough[64 * 64];
@@ -56,10 +57,14 @@ __global__ void hough(uint8_t* edges_x, uint8_t* edges_y, unsigned int* edges_le
 	for (int i = threadIdx.x; i < 64 * 64; i += blockDim.x) {
 		sh_hough[i] = 0;
 	}
-	//Pull in precomputed sin and cos values from global.
+
+	//Precomputed sin and cos values.
+	float spacing = 360.0 / NUM_DEGREE_CALC;
 	for (int i = threadIdx.x; i < NUM_DEGREE_CALC; i += blockDim.x) {
-		sh_sin[i] = global_sin[i];
-		sh_cos[i] = global_cos[i];
+		// The ability to use fast math here is advantagous over alternatives for
+		// sin and cos in degree mode such as sincospif()
+		sh_sin[i] = __sinf((i * spacing * CUDART_PI_F) / 180.0);
+		sh_cos[i] = __cosf((i * spacing * CUDART_PI_F) / 180.0);
 	}
 	__syncthreads();
 
@@ -70,7 +75,6 @@ __global__ void hough(uint8_t* edges_x, uint8_t* edges_y, unsigned int* edges_le
 		float point_x = edges_x[k] / 4.0;
 		float point_y = edges_y[k] / 4.0;
 
-		// Draw each circle in the accumulator.
 		for (int i = 0; i < NUM_DEGREE_CALC; i++) {
 			int a = round(point_y - (6 + blockIdx.x) * sh_sin[i]);
 			int b = round(point_x - (6 + blockIdx.x) * sh_cos[i]);
