@@ -4,14 +4,12 @@
 using namespace std;
 
 // Point constructor
-Point::Point(int a, int b)
-{
+Point::Point(int a, int b) {
 	x = a;
 	y = b;
 }
 
-Point::Point()
-{
+Point::Point() {
 	x = 0;
 	y = 0;
 }
