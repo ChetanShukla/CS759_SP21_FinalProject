@@ -1,6 +1,11 @@
 #include "canny.hpp"
 #include "global.hpp"
 
+#include <cstdlib>
+#include <ctime>
+// #include <cublas_v2.h>
+// #include <curand.h>
+
 using namespace std;
 
 // =================================== Magnitude Image ==================================
@@ -14,16 +19,20 @@ void magnitude_matrix(double **pic, double **mag, double **x, double **y)
 	double maskx[dim][dim], masky[dim][dim];
 
 	// Use the Gausian 1st derivative formula to fill in the mask values
+    // TODO : We can use a custom kernel to perform this operation here
+    double denominator = 2 * sig * sig; 
 	for (int p = -cent; p <= cent; p++)
 	{	
 		for (int q = -cent; q <= cent; q++)
 		{
-			maskx[p+cent][q+cent] = q * exp(-1 * ((p * p + q * q) / (2 * sig * sig)));
-			masky[p+cent][q+cent] = p * exp(-1 * ((p * p + q * q) / (2 * sig * sig)));
+            double numerator = (p * p + q * q);
+			maskx[p+cent][q+cent] = q * exp(-1 * (numerator / denominator));
+			masky[p+cent][q+cent] = p * exp(-1 * (numerator / denominator));
 		}
 	}
 
 	// Scanning convolution
+    // TODO : We can use the cublasSgemm() function to perform this convolution here 
 	double sumx, sumy;
 	for (int i = 0; i < height; i++)
 	{ 
@@ -52,6 +61,7 @@ void magnitude_matrix(double **pic, double **mag, double **x, double **y)
 	}
 
 	// Find magnitude and maxVal, then store it in the 'mag' matrix
+    // TODO : We can use a custom kernel to perform this operation here
 	double mags;
 	double maxVal = 0;
 	for (int i = 0; i < height; i++)
@@ -68,6 +78,7 @@ void magnitude_matrix(double **pic, double **mag, double **x, double **y)
 	}
 
 	// Make sure all the magnitude values are between 0-255
+    // TODO : We can use a custom kernel to perform this operation here
 	for (int i = 0; i < height; i++)
 		for (int j = 0; j < width; j++)
 			mag[i][j] = mag[i][j] / maxVal * 255;
