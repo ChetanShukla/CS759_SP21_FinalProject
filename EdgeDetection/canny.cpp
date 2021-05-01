@@ -6,18 +6,19 @@
 
 using namespace std;
 
-/* ================================ Peaks Detection ================================
-    The formula for the slope of a given line is Δy/Δx. We have Δy and Δx from the
-    scanning convolution step before. We can get the slope by dividing the two.
-    We'll store all the points that are greater than both its neighbors in the 
-    direction of the slope into a vector. We can calculate the direction of the slope
-    using the tan(x) function. We'll also store the peaks in a HashMap for 
-    O(1) searches in the recursiveDT function later.
-   ================================ Peaks Detection ================================
-*/
-vector<Point*> peak_detection(double *mag, unordered_map<Point*, bool> peaks, double *x, double *y, int height, int width) {
+/*** 
+ * ===============================> Peaks Detection <================================
+ * Slope of given line = Δy/Δx. We have Δy and Δx from the scanning convolution
+ * step before. We'll store all the points that are greater than both its neighbors
+ * neighbors in the direction of the slope into a vector. We can calculate the 
+ * direction of the slope using the tan(x) function. We'll also store the peaks in a
+ * HashMap for O(1) look-up later.
+ * ================================> Peaks Detection <===============================
+***/
+
+vector<Pixel*> peak_detection(double *mag, unordered_map<Pixel*, bool> peaks, double *x, double *y, int height, int width) {
 	double slope = 0;
-	vector<Point*> points;
+	vector<Pixel*> points;
 	for (int i = 1; i < height - 1; i++) {
 		for (int j = 1; j < width - 1; j++) {
             
@@ -29,7 +30,7 @@ vector<Point*> peak_detection(double *mag, unordered_map<Point*, bool> peaks, do
                 x[equivalent1DCurrentIndex] = 0.00001;
 
             slope = y[equivalent1DCurrentIndex] / x[equivalent1DCurrentIndex];
-            Point* givenPoint = new Point(i, j);
+            Pixel* givenPoint = new Pixel(i, j);
 
             bool shouldInsert = false;
 
@@ -66,15 +67,17 @@ vector<Point*> peak_detection(double *mag, unordered_map<Point*, bool> peaks, do
 	return points;
 }
 
-// ======================== Hysteresis & Double Thresholding ========================
-// The points passed into this function are coming from the peaks vector. We'll start
-// by searching around the current pixel for a pixel that made it to "final". If
-// found, then we'll recursively search for a "series" of pixels that are in the mid
-// range and swith all those to ON in final. We'll stop as soon as all the pixels are
-// either already processed or less than the 'lo' threshold.
-// ======================== Hysteresis & Double Thresholding ========================
-void recursiveDoubleThresholding(double *mag, double *final, unordered_map<Point*, bool> visited, 
-                                    unordered_map<Point*, bool> peaks, int a, int b, int flag, 
+/***
+ * ========================> Hysteresis & Double Thresholding <========================
+ * The points passed into this function are coming from the peaks vector. We'll start
+ * by searching around the current pixel for a pixel that made it to "final". If found,
+ * then we'll recursively search for a "series" of pixels that are in the mid range and
+ * switch all those to ON in final. We'll stop as soon as all the pixels are either
+ * already processed or less than the 'lo' threshold.
+ * ========================> Hysteresis & Double Thresholding <========================  
+***/
+void recursiveDoubleThresholding(double *mag, double *final, unordered_map<Pixel*, bool> visited, 
+                                    unordered_map<Pixel*, bool> peaks, int a, int b, int flag, 
                                     int width, int height) {
     
     // If the pixel value is < lo, out-of-bounds, or at a point we've visited before,
@@ -82,7 +85,7 @@ void recursiveDoubleThresholding(double *mag, double *final, unordered_map<Point
 	if (mag[a * width + b] < lo || a < 0 || b < 0 || a >= height || b >= width)
 		return;
 
-    Point* givenPoint = new Point(a, b);    
+    Pixel* givenPoint = new Pixel(a, b);    
 	if (visited.find(givenPoint) != visited.end())
 		return;
 
@@ -119,7 +122,7 @@ void recursiveDoubleThresholding(double *mag, double *final, unordered_map<Point
                 int rowIndex = a+p;
                 int colIndex = b+q;
                 
-                Point* currentPoint = new Point(rowIndex, colIndex); 
+                Pixel* currentPoint = new Pixel(rowIndex, colIndex); 
 				
                 if (mag[rowIndex * width + colIndex] >= lo && peaks.find(currentPoint) != peaks.end()) {
                     
