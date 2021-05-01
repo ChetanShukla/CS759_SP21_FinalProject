@@ -1,6 +1,7 @@
 #include "canny.hpp"
 #include "global.hpp"
 #include "point.hpp"
+#include "canny.cuh"
 
 using namespace std;
 
@@ -65,8 +66,10 @@ int main(int argc, char **argv)
 		for (int j = 0; j < width; j++)
 			pic[i][j] = (int)infile.get();
 
+    convolve(pic, x, y, height, width, height, width);        
+
 	// Create the magniute matrix
-	magnitude_matrix(pic, mag, x, y);
+	// magnitude_matrix(pic, mag, x, y);
 
 	// Get all the peaks and store them in vector
 	unordered_map<Point*, bool> peaks;
@@ -87,7 +90,7 @@ int main(int argc, char **argv)
 		else if (mag[a][b] < lo)
 			final[a][b] = 0;
 		else
-			recursiveDT(mag, final, h, peaks, a, b, 0);
+			recursiveDoubleThresholding(mag, final, h, peaks, a, b, 0);
 	}
 
 	// ================================= IMAGE OUTPUT =================================
