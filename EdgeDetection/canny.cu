@@ -229,7 +229,7 @@ float* getMagnitudeMatrix(unsigned int height, unsigned int width, float* x, flo
 // range and swith all those to ON in final. We'll stop as soon as all the pixels are
 // either already processed or less than the 'lo' threshold.
 // ======================== Hysteresis & Double Thresholding ========================
-void recursiveDT(double *mag, double *final, unordered_map<Point*, bool> visited, unordered_map<Point*, bool> peaks, 
+void recursiveDoubleThresholding(double *mag, double *final, unordered_map<Point*, bool> visited, unordered_map<Point*, bool> peaks, 
                     int a, int b, int flag, int width, int height) {
     
                         // If the pixel value is < lo, out-of-bounds, or at a point we've visited before,
@@ -279,7 +279,7 @@ void recursiveDT(double *mag, double *final, unordered_map<Point*, bool> visited
                 Point* currentPoint = new Point(rowIndex, colIndex); 
 				if (mag[rowIndex * width + colIndex] >= lo && peaks.find(currentPoint) != peaks.end()) {
                     
-                    recursiveDT(mag, final, h, peaks, a+p, b+q, 1);
+                    recursiveDoubleThresholding(mag, final, h, peaks, a+p, b+q, 1);
 					final[a * width + b] = 255;
                 }
 			}
