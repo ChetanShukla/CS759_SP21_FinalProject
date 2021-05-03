@@ -1,4 +1,4 @@
-#include "pixel.hpp"
+#include "pixel.cuh"
 
 using namespace std;
 

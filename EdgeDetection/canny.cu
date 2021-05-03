@@ -1,6 +1,6 @@
 #include "canny.cuh"
-#include "global.hpp"
-#include "point.hpp"
+// #include "global.hpp"
+#include "pixel.cuh"
 
 using namespace std;
 
@@ -66,6 +66,7 @@ __host__ void convolve(const float* image, float* xOutput, float* yOutput, const
                         int imageRows, int imageCols, int outputRows, int outputCols, int maskDimension) {
 
     
+    /*
     dim3 threads(BLOCK_SIZE, BLOCK_SIZE);
 	dim3 grid((WB - 1) / (BLOCK_SIZE - WC + 1), (WB - 1) / (BLOCK_SIZE - WC + 1));
 
@@ -79,6 +80,7 @@ __host__ void convolve(const float* image, float* xOutput, float* yOutput, const
 	cudaEventRecord(stop_G);
 
     cudaEventSynchronize(stop_G); 
+    */
     
     // float* mag = getMagnitudeMatrix(height, width, xOutput, yOutput);
 

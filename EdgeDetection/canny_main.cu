@@ -1,13 +1,16 @@
-#include "canny.hpp"
+#include "canny_cpu.cuh"
 // #include "global.hpp"
-#include "pixel.hpp"
+#include "pixel.cuh"
 #include "canny.cuh"
+#include <iostream>
 #include <cuda.h>
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image_write.h"
 
 using namespace std;
 
@@ -29,7 +32,6 @@ int intensity;
 void prepare_mask_arrays(float* maskx, float* masky, size_t dimension, int sigma) {
 
     int cent = dimension/2;
-    int maskSize = dimension * dimension;
 
     // Use the Gausian 1st derivative formula to fill in the mask values
     float denominator = 2 * sigma * sigma; 
@@ -54,7 +56,7 @@ void prepare_mask_arrays(float* maskx, float* masky, size_t dimension, int sigma
 float* getPixelsFromPngImage(unsigned char *img, int width, int height, int channels) {
 
     size_t img_size = width * height * channels;
-    float *pixels = (float*) malloc(img_size);
+    float *pixels = (float*) malloc(sizeof(float) * img_size);
 
     unsigned int i = 0, j = 0;
     for(unsigned char *p = img; p != img + img_size; p += channels) {
@@ -67,9 +69,10 @@ float* getPixelsFromPngImage(unsigned char *img, int width, int height, int chan
 
 void getNormalisedMagnitudeMatrix(float* mag, unsigned int height, unsigned int width) {
 
-    float maxVal = 0f;
-	for (int i = 0; i < height; i++) {
-		for(int j = 0; j < width; j++) {
+    float maxVal = 0.0;
+    unsigned int i, j;
+	for (i = 0; i < height; i++) {
+		for(j = 0; j < width; j++) {
             if (mag[i * width + j] > maxVal) {
                 maxVal = mag[i * width + j];     
             }
@@ -77,21 +80,23 @@ void getNormalisedMagnitudeMatrix(float* mag, unsigned int height, unsigned int 
 	}
 
 	// Make sure all the magnitude values are between 0-255
-    for (int i = 0; i < height; i++)
-		for (int j = 0; j < width; j++)
+    for (i = 0; i < height; i++)
+		for (j = 0; j < width; j++)
             mag[i * width + j] = mag[i * width + j] / maxVal * 255;
             
-    return mag;        
+    return;        
 }
 
 int main(int argc, char **argv)
 {
 	// Exit program if proper arguments are not provided by user
-	if (argc != 4)
+    /*
+    if (argc != 4)
 	{
 		cout << "Proper syntax: ./a.out <input_filename> <high_threshold> <sigma_value>" << endl;
 		return 0;
-	}
+    }
+    */
 
     double sig = 1;
     int dim = 6 * sig + 1, cent = dim / 2;
@@ -141,7 +146,7 @@ int main(int argc, char **argv)
 		return EXIT_FAILURE;
 	}    
 
-    int width, height, channels, total_images = 100;
+    int width, height, channels, total_images = 2;
 
     for (int image_count = 1; image_count <= total_images; image_count++) {
 
@@ -228,11 +233,11 @@ int main(int argc, char **argv)
 	    dim3 grid((WB - 1) / (BLOCK_SIZE - WC + 1), (WB - 1) / (BLOCK_SIZE - WC + 1));
 
 	    cudaEventRecord(start_G);
-        convolution_kernel <<< grid, threads >>> (dev_pixels, dev_x, dev_mask_x, height, width, height, width, maskDimension);
+        convolution_kernel <<< grid, threads >>> (dev_pixels, dev_x, dev_mask_x, height, width, height, width, dim);
         cudaEventRecord(stop_G);
 
 	    cudaEventRecord(start_G);
-	    convolution_kernel <<< grid, threads >>> (dev_pixels, dev_y, dev_mask_y, height, width, height, width, maskDimension);
+	    convolution_kernel <<< grid, threads >>> (dev_pixels, dev_y, dev_mask_y, height, width, height, width, dim);
         cudaEventRecord(stop_G);
 
         // convolve(pixels, dev_x, dev_y, dev_mask_x, dev_mask_y, height, width, height, width, dim); 
@@ -310,7 +315,18 @@ int main(int argc, char **argv)
         }
 
         
-        // Final step : Keeping the final image matrix 
+        printf("\n\nLet the magic begin!\n");
+
+        for (i=0; i<height; i++) {
+            for (j=0; j<width; j++) {
+                printf("%u ", final[i*width + j]);
+            }
+            printf("\n");
+        }
+        
+        
+        // Final step : Storing the final image matrix in the Device/GPU global memory
+        // for further processing in the Hough transform step
 
         uint8_t* dev_final_image;
 
@@ -326,10 +342,23 @@ int main(int argc, char **argv)
 		if (error != cudaSuccess) {
 			printf("image move to device failed");
 			return EXIT_FAILURE;
-		}
+        }
+        
 
+        // Convert the input image to output image
+        unsigned char *output_img = (unsigned char *)malloc(img_size);
+        if(output_img == NULL) {
+            printf("Unable to allocate memory for the output image.\n");
+            exit(1);
+        }
 
-        // stbi_write_png("sky.png", width, height, channels, img, width * channels);
+        i = 0;
+        for(unsigned char *pg = output_img; i < img_size; i += channels, pg += channels) {
+            *pg = final[i];     
+        }
+
+        string output_path = "./processed_images/output_" + filename;
+        stbi_write_png(output_path.c_str(), width, height, channels, output_img, width * channels);
         // stbi_write_jpg("sky2.jpg", width, height, channels, img, 100);
 
         stbi_image_free(img);
@@ -340,8 +369,10 @@ int main(int argc, char **argv)
         delete[] mag;
         cudaFree(dev_x);
         cudaFree(dev_y);
+        cudaFree(dev_pixels);
+        cudaFree(dev_mag);
         cudaFree(dev_final_image);
-
+        free(pixels);
     }
     
     free(maskx);
@@ -360,9 +391,9 @@ int main(int argc, char **argv)
 	// }	
 
 	// Opening output files
-	ofstream img1("./output_images/canny_mag.pgm", ios::binary);
-	ofstream img2("./output_images/canny_peaks.pgm", ios::binary);		
-	ofstream img3("./output_images/canny_final.pgm", ios::binary);
+	// ofstream img1("./output_images/canny_mag.pgm", ios::binary);
+	// ofstream img2("./output_images/canny_peaks.pgm", ios::binary);		
+	// ofstream img3("./output_images/canny_final.pgm", ios::binary);
 
 	// ::hi = stoi(argv[2]);
 	// ::lo = .35 * hi;

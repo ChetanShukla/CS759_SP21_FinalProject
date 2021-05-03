@@ -1,5 +1,5 @@
-#ifndef PIXEL_HPP
-#define PIXEL_HPP
+#ifndef PIXEL_CUH
+#define PIXEL_CUH
 
 // Pixel class that will be used in the HashMap
 class Pixel {

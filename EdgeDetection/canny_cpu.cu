@@ -1,4 +1,4 @@
-#include "canny.hpp"
+#include "canny_cpu.cuh"
 // #include "global.hpp"
 
 // #include <cstdlib>
@@ -16,7 +16,7 @@ using namespace std;
  * ================================> Peaks Detection <===============================
 ***/
 
-vector<Pixel*> peak_detection(double *mag, unordered_map<Pixel*, bool> peaks, double *x, double *y, int height, int width) {
+vector<Pixel*> peak_detection(float *mag, unordered_map<Pixel*, bool> peaks, float *x, float *y, int height, int width) {
 	double slope = 0;
 	vector<Pixel*> points;
 	for (int i = 1; i < height - 1; i++) {
@@ -76,7 +76,7 @@ vector<Pixel*> peak_detection(double *mag, unordered_map<Pixel*, bool> peaks, do
  * already processed or less than the 'lo' threshold.
  * ========================> Hysteresis & Double Thresholding <========================  
 ***/
-void recursiveDoubleThresholding(double *mag, double *final, unordered_map<Pixel*, bool> visited, 
+void recursiveDoubleThresholding(float *mag, uint8_t *final, unordered_map<Pixel*, bool> visited, 
                                     unordered_map<Pixel*, bool> peaks, int a, int b, int flag, 
                                     const int width, const int height, const int lo) {
     
@@ -126,7 +126,7 @@ void recursiveDoubleThresholding(double *mag, double *final, unordered_map<Pixel
 				
                 if (mag[rowIndex * width + colIndex] >= lo && peaks.find(currentPoint) != peaks.end()) {
                     
-                    recursiveDoubleThresholding(mag, final, visited, peaks, a+p, b+q, 1, width, height);
+                    recursiveDoubleThresholding(mag, final, visited, peaks, a+p, b+q, 1, width, height, lo);
 					final[a * width + b] = 255;
                 }
 			}
