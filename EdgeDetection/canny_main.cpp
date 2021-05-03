@@ -15,6 +15,31 @@ int hi;
 int lo;
 double sig;
 
+void prepare_mask_arrays(float* maskx, float* masky, size_t dimension, int sigma) {
+
+    int cent = dimension/2;
+    int maskSize = dimension * dimension;
+
+    // Use the Gausian 1st derivative formula to fill in the mask values
+    float denominator = 2 * sigma * sigma; 
+
+    for (int p = -cent; p <= cent; p++) {	
+		for (int q = -cent; q <= cent; q++) {
+            
+            float numerator = (p * p + q * q);
+            
+            int rowIndex = p + cent;
+            int colIndex = q + cent;
+
+            // maskx[p+cent][q+cent] = q * exp(-1 * (numerator / denominator))
+			maskx[rowIndex * dimension + colIndex] = q * exp(-1 * (numerator / denominator));
+            
+            // masky[p+cent][q+cent] = p * exp(-1 * (numerator / denominator))
+            masky[rowIndex * dimension + colIndex] = p * exp(-1 * (numerator / denominator)); 
+		}
+    }    
+}
+
 int main(int argc, char **argv)
 {
 	// Exit program if proper arguments are not provided by user
@@ -23,6 +48,17 @@ int main(int argc, char **argv)
 		cout << "Proper syntax: ./a.out <input_filename> <high_threshold> <sigma_value>" << endl;
 		return 0;
 	}
+
+    int dim = 6 * sig + 1, cent = dim / 2;
+
+    unsigned int maskSize = dim * dim;
+    unsigned int maskMemorySize = sizeof(float) * maskSize;
+
+    // float maskx[dim][dim], masky[dim][dim]
+    float* maskx = (float*)malloc(maskMemorySize);
+    float* masky = (float*)malloc(maskMemorySize);
+
+    prepare_mask_arrays(maskx, masky, dim, sig);
 
     int width, height, channels, total_images = 100;
 
@@ -75,14 +111,14 @@ int main(int argc, char **argv)
     }
 
 	// Exit program if file doesn't open
-	string filename(argv[1]);
-	string path = "./input_images/" + filename;
-	ifstream infile(path, ios::binary);
-	if (!infile.is_open())
-	{
-		cout << "File " << path << " not found in directory." << endl;
-		return 0;
-	}	
+	// string filename(argv[1]);
+	// string path = "./input_images/" + filename;
+	// ifstream infile(path, ios::binary);
+	// if (!infile.is_open())
+	// {
+	// 	cout << "File " << path << " not found in directory." << endl;
+	// 	return 0;
+	// }	
 
 	// Opening output files
 	ofstream img1("./output_images/canny_mag.pgm", ios::binary);
@@ -94,7 +130,7 @@ int main(int argc, char **argv)
 	::sig = stoi(argv[3]);
 
 	// Storing header information and copying into the new ouput images
-	infile >> ::type >> width >> height >> ::intensity;
+	// infile >> ::type >> width >> height >> ::intensity;
 	img1 << type << endl << width << " " << height << endl << intensity << endl;
 	img2 << type << endl << width << " " << height << endl << intensity << endl;
 	img3 << type << endl << width << " " << height << endl << intensity << endl;
