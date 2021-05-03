@@ -12,10 +12,10 @@ using namespace std;
 #include <time.h>
 
 #define BLOCK_SIZE 32
-#define WA 512   
-#define HA 512     
-#define HC 3     
-#define WC 3
+#define WA 256   
+#define HA 256     
+#define HC 7     
+#define WC 7
 #define WB (WA - WC + 1)
 #define HB (HA - HC + 1)
 
@@ -29,7 +29,9 @@ The output of this step is stored in the output array.
 
 ========================================================================================================================
 **/
-__global__ void convolution_kernel(float* image, float* output, float* mask, int imageRows, int imageCols, int outputRows, int outputCols, int maskRows, int maskCols) {
+__global__ void convolution_kernel(const float* image, float* output, const float* mask, 
+                                    int imageRows, int imageCols, int outputRows, int outputCols, 
+                                    int maskDimension) {
     
     int col = blockIdx.x * (BLOCK_SIZE - WC + 1) + threadIdx.x;
 	int row = blockIdx.y * (BLOCK_SIZE - WC + 1) + threadIdx.y;
@@ -49,85 +51,51 @@ __global__ void convolution_kernel(float* image, float* output, float* mask, int
 
 	__syncthreads();
 
-	if (threadIdx.y < (BLOCK_SIZE - WC + 1) && threadIdx.x < (BLOCK_SIZE - WC + 1) && row < (WB - WC + 1) && col < (WB - WC + 1))
-	{
+    if (threadIdx.y < (BLOCK_SIZE - WC + 1) && threadIdx.x < (BLOCK_SIZE - WC + 1) 
+            && row < (WB - WC + 1) && col < (WB - WC + 1)) {
 		for (int i = 0; i< WC;i++)
 			for (int j = 0;j<WC;j++)
 				tmp += sharedMem[threadIdx.y + i][threadIdx.x + j] * mask[j*WC + i];
         // TODO Check if this indexing is correct
         output[col*WB + row] = tmp;
+        // Or should it be output[row*WB + col] = tmp; 
 	}
 }
 
-__host__ void convolve(float* image, float* xOutput, float* yOutput, int imageRows, int imageCols, int outputRows, int outputCols) {
+__host__ void convolve(const float* image, float* xOutput, float* yOutput, const float* maskx, const float* masky, 
+                        int imageRows, int imageCols, int outputRows, int outputCols, int maskDimension) {
 
-    int dim = 6 * sig + 1, cent = dim / 2;
-    
-    unsigned int maskSize = dim * dim;
-    unsigned int maskMemorySize = sizeof(float) * maskSize;
-
-    // float maskx[dim][dim], masky[dim][dim]
-    float* maskx = (float*)malloc(maskMemorySize);
-    float* masky = (float*)malloc(maskMemorySize);
-
-
-	// Use the Gausian 1st derivative formula to fill in the mask values
-    float denominator = 2 * sig * sig; 
-	for (int p = -cent; p <= cent; p++)
-	{	
-		for (int q = -cent; q <= cent; q++)
-		{
-            float numerator = (p * p + q * q);
-            
-            int rowIndex = p + cent;
-            int colIndex = q + cent;
-
-            // maskx[p+cent][q+cent] = q * exp(-1 * (numerator / denominator))
-			maskx[rowIndex * maskSize + colIndex] = q * exp(-1 * (numerator / denominator));
-            
-            // masky[p+cent][q+cent] = p * exp(-1 * (numerator / denominator))
-            masky[rowIndex * maskSize + colIndex] = p * exp(-1 * (numerator / denominator)); 
-		}
-	}
-
-    cudaError_t error;
-    cudaEvent_t start_G, stop_G;
-    
-    cudaEventCreate(&start_G);
-	cudaEventCreate(&stop_G);
     
     dim3 threads(BLOCK_SIZE, BLOCK_SIZE);
 	dim3 grid((WB - 1) / (BLOCK_SIZE - WC + 1), (WB - 1) / (BLOCK_SIZE - WC + 1));
 
-	convolution_kernel <<< grid, threads >>> (image, xOutput, maskx, imageRows, imageCols, outputRows, outputCols, maskSize, maskSize);
+	convolution_kernel <<< grid, threads >>> (image, xOutput, maskx, imageRows, imageCols, outputRows, outputCols, maskDimension, maskDimension);
 
 	cudaEventRecord(start_G);
 
-	convolution_kernel <<< grid, threads >>> (image, yOutput, masky, imageRows, imageCols, outputRows, outputCols, maskSize, maskSize);
+	convolution_kernel <<< grid, threads >>> (image, yOutput, masky, imageRows, imageCols, outputRows, outputCols, maskDimension, maskDimension);
 	error = cudaGetLastError();
     
-    if (error != cudaSuccess)
-	{
-		fprintf(stderr, "GPUassert: %s  in launching kernel\n", cudaGetErrorString(error));
-		return EXIT_FAILURE;
-	}
-
-	error = cudaDeviceSynchronize();
-
-	if (error != cudaSuccess)
-	{
-		fprintf(stderr, "GPUassert: %s  in cudaDeviceSynchronize \n", cudaGetErrorString(error));
-		return EXIT_FAILURE;
-	}
-
 	cudaEventRecord(stop_G);
 
     cudaEventSynchronize(stop_G); 
     
-    float* mag = getMagnitudeMatrix(height, width, xOutput, yOutput);
+    // float* mag = getMagnitudeMatrix(height, width, xOutput, yOutput);
 
 }
 
+__global__ void magnitude_matrix_kernel(float* mag, const float* x, const float* y, const int height, const int width) {
+
+    int index = blockDim.x * blockIdx.x + threadIdx.x;
+    int array_upper_bound = width * height;
+
+    if (index < array_upper_bound) {
+        float mags = x[index] * x[index] + y[index] * y[index];
+        mag[index] = mags;
+    }
+}
+
+/*
 float* getMagnitudeMatrix(unsigned int height, unsigned int width, float* x, float* y) {
 
     unsigned int magnitudeSize = height * width;
@@ -158,3 +126,4 @@ float* getMagnitudeMatrix(unsigned int height, unsigned int width, float* x, flo
             
     return mag;        
 }
+*/
