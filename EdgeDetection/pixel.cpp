@@ -1,15 +1,14 @@
-#include "global.hpp"
-#include "point.hpp"
+#include "pixel.hpp"
 
 using namespace std;
 
-// Point constructor
-Point::Point(int a, int b) {
+// Pixel constructor
+Pixel::Pixel(int a, int b) {
 	x = a;
 	y = b;
 }
 
-Point::Point() {
+Pixel::Pixel() {
 	x = 0;
 	y = 0;
 }
