@@ -87,6 +87,97 @@ void getNormalisedMagnitudeMatrix(float* mag, unsigned int height, unsigned int 
     return;        
 }
 
+void printArrayForDebugging(float *arr, int height, int width) {
+    for (int i=0; i<height; i++) {
+        for (int j=0; j<width; j++) {
+            printf("%f ", arr[i*width + j]);
+        }
+        printf("\n");
+    }
+}
+
+// =================================== Magnitude Image ==================================
+// We'll start by filling in the mask values using the Gausian 1st derivative. Next, do a
+// scanning convolution on the input pic matrix. This will give us the Δy and Δx matrices
+// Finally, take the sqrt of the sum of Δy^2 and Δx^2 to find the magnitude.
+// =================================== Magnitude Image ==================================
+void magnitude_matrix(float *pic, float *mag, float *x, float *y, float *maskx, float *masky, double sig, int height, int width) {
+    
+    int dim = 6 * sig + 1, cent = dim / 2;
+
+    printf("Pic: \n");
+    printArrayForDebugging(pic, height, width);
+
+	// Scanning convolution
+	float sumx, sumy;
+	for (int i = 0; i < height; i++)
+	{ 
+		for (int j = 0; j < width; j++)
+		{
+			sumx = 0;
+			sumy = 0;
+
+			// This is the convolution
+			for (int p = -cent; p <= cent; p++)
+			{
+				for (int q = -cent; q <= cent; q++)
+				{
+					//if ((i+p) < 0 || (j+q) < 0 || (i+p) >= height || (j+q) >= width)
+					//	continue;
+                    
+                    int rowIndex = i+p;
+                    int colIndex = j+q;  
+                    int maskRowIndex = p + cent;
+                    int maskColIndex = q + cent; 
+                    
+                    if ((rowIndex * width + colIndex) < 0 || (maskRowIndex * width + maskColIndex) < 0 
+                            || (rowIndex * width + colIndex) >= height*width 
+                            || (maskRowIndex * width + maskColIndex) >= height*width)
+						continue; 
+                    
+                    sumx += pic[rowIndex * width + colIndex] * maskx[maskRowIndex * dim + maskColIndex];
+					sumy += pic[rowIndex * width + colIndex] * masky[maskRowIndex * dim + maskColIndex];
+				}
+			}
+			
+			// Store convolution result in respective matrix
+			x[i * width + j] = sumx;
+			y[i * width + j] = sumy;
+		}
+    }
+    
+    printf("\n\n X Matrix : \n");
+    printArrayForDebugging(x, height, width);
+    printf("\n\n Y Matrix : \n");
+    printArrayForDebugging(y, height, width);    
+
+	// Find magnitude and maxVal, then store it in the 'mag' matrix
+	double mags;
+	double maxVal = 0;
+	for (int i = 0; i < height; i++)
+	{
+		for(int j = 0; j < width; j++)
+		{
+			mags = sqrt((x[i * width + j] * x[i * width + j]) + (y[i * width + j] * y[i * width + j]));
+
+			if (mags > maxVal)
+				maxVal = mags;
+
+			mag[i * width + j] = mags;
+		}
+    }
+    
+    printf("maxVal: %f\n", maxVal);
+
+	// Make sure all the magnitude values are between 0-255
+	for (int i = 0; i < height; i++)
+		for (int j = 0; j < width; j++)
+            if (maxVal != 0)    
+                mag[i * width + j] = mag[i * width + j] / maxVal * 255;
+
+	return;
+}
+
 int main(int argc, char **argv)
 {
 	// Exit program if proper arguments are not provided by user
@@ -233,11 +324,11 @@ int main(int argc, char **argv)
 	    dim3 grid((WB - 1) / (BLOCK_SIZE - WC + 1), (WB - 1) / (BLOCK_SIZE - WC + 1));
 
 	    cudaEventRecord(start_G);
-        convolution_kernel <<< grid, threads >>> (dev_pixels, dev_x, dev_mask_x, height, width, height, width, dim);
+        // convolution_kernel <<< grid, threads >>> (dev_pixels, dev_x, dev_mask_x, height, width, height, width, dim);
         cudaEventRecord(stop_G);
 
 	    cudaEventRecord(start_G);
-	    convolution_kernel <<< grid, threads >>> (dev_pixels, dev_y, dev_mask_y, height, width, height, width, dim);
+	    // convolution_kernel <<< grid, threads >>> (dev_pixels, dev_y, dev_mask_y, height, width, height, width, dim);
         cudaEventRecord(stop_G);
 
         // convolve(pixels, dev_x, dev_y, dev_mask_x, dev_mask_y, height, width, height, width, dim); 
@@ -276,9 +367,10 @@ int main(int argc, char **argv)
 
         // Step 4: Get the magnitude matrix using the x[] and y[] that we got from the previous step
 
-        magnitude_matrix_kernel <<<num_blocks, threads_per_block>>> (dev_mag, dev_x, dev_y, height, width);
+        // magnitude_matrix_kernel <<<num_blocks, threads_per_block>>> (dev_mag, dev_x, dev_y, height, width);
 
         // Copy back the contents of dev_mag to the host
+        /*
         error = cudaMemcpy(mag, dev_mag, sizeof(float) * height * width, cudaMemcpyDeviceToHost);
         if (error != cudaSuccess) {
             printf("Copying back mag[] to the host failed");
@@ -286,6 +378,25 @@ int main(int argc, char **argv)
         }
 
         getNormalisedMagnitudeMatrix(mag, height, width);  
+        */
+
+        printf("\n\nMagnitude Matrix Before: \n");
+        for (i=0; i<height; i++) {
+            for (j=0; j<width; j++) {
+                printf("%f ", mag[i*width + j]);
+            }
+            printf("\n");
+        }
+        magnitude_matrix(pixels, mag, x, y, maskx, masky, sig, height, width);
+
+        printf("\n\nMagnitude Matrix After: \n");
+        for (i=0; i<height; i++) {
+            for (j=0; j<width; j++) {
+                printf("%f ", mag[i*width + j]);
+            }
+            printf("\n");
+        }
+
 
         // Step 5: Get all the peaks and store them in a vector
         unordered_map<Pixel*, bool> peaks;
@@ -314,7 +425,7 @@ int main(int argc, char **argv)
                 recursiveDoubleThresholding(mag, final, visited, peaks, a, b, 0, width, height, lo);
         }
 
-        
+        /*
         printf("\n\nLet the magic begin!\n");
 
         for (i=0; i<height; i++) {
@@ -323,7 +434,7 @@ int main(int argc, char **argv)
             }
             printf("\n");
         }
-        
+        */
         
         // Final step : Storing the final image matrix in the Device/GPU global memory
         // for further processing in the Hough transform step
