@@ -1,5 +1,5 @@
 #include "canny.hpp"
-#include "global.hpp"
+// #include "global.hpp"
 
 // #include <cstdlib>
 // #include <ctime>
@@ -78,7 +78,7 @@ vector<Pixel*> peak_detection(double *mag, unordered_map<Pixel*, bool> peaks, do
 ***/
 void recursiveDoubleThresholding(double *mag, double *final, unordered_map<Pixel*, bool> visited, 
                                     unordered_map<Pixel*, bool> peaks, int a, int b, int flag, 
-                                    int width, int height) {
+                                    const int width, const int height, const int lo) {
     
     // If the pixel value is < lo, out-of-bounds, or at a point we've visited before,
 	// then exit the funciton.
