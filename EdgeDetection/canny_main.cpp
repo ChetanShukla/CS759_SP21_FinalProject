@@ -40,14 +40,14 @@ void prepare_mask_arrays(float* maskx, float* masky, size_t dimension, int sigma
     }    
 }
 
-uint8_t* getPixelsFromPngImage(unsigned char *img, int width, int height, int channels) {
+float* getPixelsFromPngImage(unsigned char *img, int width, int height, int channels) {
 
     size_t img_size = width * height * channels;
-    uint8_t *pixels = (uint8_t*) malloc(img_size);
+    float *pixels = (float*) malloc(img_size);
 
     unsigned int i = 0, j = 0;
     for(unsigned char *p = img; p != img + img_size; p += channels) {
-        *(pixels + i) = (uint8_t) *p;
+        *(pixels + i) = (float) *p;
         i++;
     }
 
@@ -65,14 +65,46 @@ int main(int argc, char **argv)
 
     int dim = 6 * sig + 1, cent = dim / 2;
 
-    unsigned int maskSize = dim * dim;
-    unsigned int maskMemorySize = sizeof(float) * maskSize;
+    cudaError_t error;
+    unsigned int mask_size = dim * dim;
+    unsigned int mask_memory_size = sizeof(float) * mask_size;
 
     // float maskx[dim][dim], masky[dim][dim]
-    float* maskx = (float*)malloc(maskMemorySize);
-    float* masky = (float*)malloc(maskMemorySize);
+    float* maskx = (float*)malloc(mask_memory_size);
+    float* masky = (float*)malloc(mask_memory_size);
 
     prepare_mask_arrays(maskx, masky, dim, sig);
+
+    float* dev_mask_x;
+    float* dev_mask_y;
+
+    // allocate memory for x[] on the device(GPU)
+	error = cudaMalloc((void**)&dev_mask_x, mask_memory_size);
+	if (error != cudaSuccess) {
+		printf("Allocation for mask_x[] on the device memory failed!");
+		return EXIT_FAILURE;
+	}
+
+    // allocate memory for y[] on the device(GPU)
+	error = cudaMalloc((void**)&dev_mask_y, mask_memory_size);
+	if (error != cudaSuccess) {
+		printf("Allocation for mask_y[] on the device memory failed!");
+		return EXIT_FAILURE;
+	}    
+
+    // Put the mask_x on the device
+	error = cudaMemcpy(dev_mask_x, maskx, mask_memory_size, cudaMemcpyHostToDevice);
+	if (error != cudaSuccess) {
+		printf("Moving the mask_x[] to device failed");
+		return EXIT_FAILURE;
+	}
+
+    // Put the mask_y on the device
+	error = cudaMemcpy(dev_mask_y, masky, mask_memory_size, cudaMemcpyHostToDevice);
+	if (error != cudaSuccess) {
+		printf("Moving the mask_y[] to device failed");
+		return EXIT_FAILURE;
+	}    
 
     int width, height, channels, total_images = 100;
 
@@ -93,11 +125,12 @@ int main(int argc, char **argv)
             printf("Error in loading the image\n");
             exit(1);
         }
-        printf("Loaded image with a width of %dpx, a height of %dpx and %d channels\n", width, height, channels);
+        // printf("Loaded image with a width of %dpx, a height of %dpx and %d channels\n", width, height, channels);
 
-        uint8_t *pixels = getPixelsFromPngImage(img, width, height, channels);
+        float *pixels = getPixelsFromPngImage(img, width, height, channels);
         unsigned int i = 0, j = 0; 
         
+        /* 
         printf("\n\nLet the magic begin!\n");
 
         for (i=0; i<height; i++) {
@@ -106,13 +139,89 @@ int main(int argc, char **argv)
             }
             printf("\n");
         }
+        */
+
+        cudaEvent_t start_G, stop_G;
+        
+        cudaEventCreate(&start_G);
+	    cudaEventCreate(&stop_G);
+
+        float* x = new float[width * height];
+        float* y = new float[width * height];
+
+        float* dev_x;
+        float* dev_y;
+        float* dev_pixels;
+
+        unsigned int mem_size_x = sizeof(float) * width * height;
+        unsigned int mem_size_y = sizeof(float) * width * height;
+        unsigned int img_size = width * height * channels;
+        unsigned int mem_size_img = sizeof(float) * img_size;
+
+        // allocate memory for x[] on the device(GPU)
+		error = cudaMalloc((void**)&dev_x, mem_size_x);
+		if (error != cudaSuccess) {
+			printf("Allocation for x[] on the device memory failed!");
+			return EXIT_FAILURE;
+		}
+
+        // allocate memory for y[] on the device(GPU)
+		error = cudaMalloc((void**)&dev_y, mem_size_y);
+		if (error != cudaSuccess) {
+			printf("Allocation for y[] on the device memory failed!");
+			return EXIT_FAILURE;
+		}
+
+        // allocate memory for pixels[] on the device(GPU)
+		error = cudaMalloc((void**)&dev_pixels, mem_size_img);
+		if (error != cudaSuccess) {
+			printf("Allocation for pixels[] on the device memory failed!");
+			return EXIT_FAILURE;
+		}
+
+        // Copying the content of pixels[] to the device(GPU)
+        error = cudaMemcpy(dev_pixels, pixels, mem_size_img, cudaMemcpyHostToDevice);
+        if (error != cudaSuccess) {
+            printf("Copying the pixels[] to device failed");
+            return EXIT_FAILURE;
+        }    
+
+        convolve(pixels, dev_x, dev_y, dev_mask_x, dev_mask_y, height, width, height, width, dim); 
+
+        // After this step, we'll get the convolution in x direction and y direction in
+        // the arrays x and y, which would later be used to generate vector of peaks
+        // which in turn is used for creating the final array. 
+
+        // Copy back the contents of dev_y to the host
+        error = cudaMemcpy(y, dev_y, mask_memory_size, cudaMemcpyDeviceToHost);
+        if (error != cudaSuccess) {
+            printf("Copying back y[] to the host failed");
+            return EXIT_FAILURE;
+        }
+
+        // Copy back the contents of dev_x to the host
+        error = cudaMemcpy(x, dev_x, mask_memory_size, cudaMemcpyDeviceToHost);
+        if (error != cudaSuccess) {
+            printf("Copying back x[] to the host failed");
+            return EXIT_FAILURE;
+        }  
 
         // stbi_write_png("sky.png", width, height, channels, img, width * channels);
         // stbi_write_jpg("sky2.jpg", width, height, channels, img, 100);
 
         stbi_image_free(img);
 
+        delete[] x;
+        delete[] y;
+        cudaFree(dev_x);
+        cudaFree(dev_y);
+
     }
+    
+    free(maskx);
+    free(masky);
+    cudaFree(dev_mask_x);
+    cudaFree(dev_mask_y);
 
 	// Exit program if file doesn't open
 	// string filename(argv[1]);
