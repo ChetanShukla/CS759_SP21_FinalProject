@@ -63,36 +63,32 @@ int main(int argc, char **argv)
     int width, height, channels, total_images = 100;
 
     for (int image_count = 1; image_count <= total_images; image_count++) {
+
+        /* 
+            Reading the required PNG image from the images folder which would
+            be processed in the current iteration. 
+        */ 
+        
         string filename = "image-" + to_string(image_count) + ".png";
         string path = "./processed_images/" + filename;
 
         cout << "\nProcessing Image: " << path << "\n\n";
 
         unsigned char *img = stbi_load(path.c_str(), &width, &height, &channels, 0);
+        
         if(img == NULL) {
             printf("Error in loading the image\n");
             exit(1);
         }
         printf("Loaded image with a width of %dpx, a height of %dpx and %d channels\n", width, height, channels);
 
-        size_t gray_img_size = width * height * channels;
         size_t img_size = width * height * channels;
-        int gray_channels = channels;
-        unsigned char *gray_img = (unsigned char*) malloc(gray_img_size);
-        unsigned int *pixels = (unsigned int*) malloc(gray_img_size);
+        uint8_t *pixels = (uint8_t*) malloc(img_size);
 
         unsigned int i = 0, j = 0;
-        for(unsigned char *p = img, *pg = gray_img; p != img + img_size; p += channels, pg += gray_channels) {
-            // *pg = (uint8_t)((*p + *(p + 1) + *(p + 2))/3.0);
-            *pg = (uint8_t) *p;
-            printf("%u ", *pg);
-
+        for(unsigned char *p = img; p != img + img_size; p += channels) {
             *(pixels + i) = (uint8_t) *pg;
             i++;
-            
-            /* if(channels == 4) {
-                *(pg + 1) = *(p + 3);
-            } */
         }
         printf("\n\nLet the magic begin!\n");
 
@@ -154,7 +150,7 @@ int main(int argc, char **argv)
 		for (int j = 0; j < width; j++)
 			pic[i][j] = (int)infile.get();
 
-    convolve(pic, x, y, height, width, height, width);        
+    convolve(pic, x, y, maskx, masky, height, width, height, width);        
 
 	// Create the magniute matrix
 	// magnitude_matrix(pic, mag, x, y);
