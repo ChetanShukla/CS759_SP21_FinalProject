@@ -40,6 +40,20 @@ void prepare_mask_arrays(float* maskx, float* masky, size_t dimension, int sigma
     }    
 }
 
+uint8_t* getPixelsFromPngImage(unsigned char *img, int width, int height, int channels) {
+
+    size_t img_size = width * height * channels;
+    uint8_t *pixels = (uint8_t*) malloc(img_size);
+
+    unsigned int i = 0, j = 0;
+    for(unsigned char *p = img; p != img + img_size; p += channels) {
+        *(pixels + i) = (uint8_t) *p;
+        i++;
+    }
+
+    return pixels;  
+}
+
 int main(int argc, char **argv)
 {
 	// Exit program if proper arguments are not provided by user
@@ -75,21 +89,15 @@ int main(int argc, char **argv)
         cout << "\nProcessing Image: " << path << "\n\n";
 
         unsigned char *img = stbi_load(path.c_str(), &width, &height, &channels, 0);
-        
         if(img == NULL) {
             printf("Error in loading the image\n");
             exit(1);
         }
         printf("Loaded image with a width of %dpx, a height of %dpx and %d channels\n", width, height, channels);
 
-        size_t img_size = width * height * channels;
-        uint8_t *pixels = (uint8_t*) malloc(img_size);
-
-        unsigned int i = 0, j = 0;
-        for(unsigned char *p = img; p != img + img_size; p += channels) {
-            *(pixels + i) = (uint8_t) *pg;
-            i++;
-        }
+        uint8_t *pixels = getPixelsFromPngImage(img, width, height, channels);
+        unsigned int i = 0, j = 0; 
+        
         printf("\n\nLet the magic begin!\n");
 
         for (i=0; i<height; i++) {
