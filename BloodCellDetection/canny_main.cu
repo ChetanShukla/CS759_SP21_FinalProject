@@ -6,6 +6,7 @@
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 #include <string>
+#include "constants.cuh"
 
 using namespace std;
 
@@ -48,19 +49,6 @@ void prepare_mask_arrays(float* maskx, float* masky, size_t dimension, int sigma
 	}
 }
 
-float* getPixelsFromPngImage(unsigned char* img, int width, int height, int channels) {
-	size_t img_size = width * height * channels;
-	float* pixels = (float*)malloc(sizeof(float) * img_size);
-
-	unsigned int i = 0;
-	for (unsigned char* p = img; p != img + img_size; p += channels) {
-		*(pixels + i) = (float)*p;
-		i++;
-	}
-
-	return pixels;
-}
-
 void getNormalisedMagnitudeMatrix(float* mag, unsigned int height, unsigned int width) {
 	// printf("\n\nMagnitude matrix before normalisation:\n");
 	// printArrayForDebugging(mag, height, width);
@@ -96,9 +84,8 @@ int canny_main(uint8_t* img, uint8_t* final) {
 	unsigned int mask_size = dim * dim;
 	unsigned int mask_memory_size = sizeof(float) * mask_size;
 
-	// float maskx[dim][dim], masky[dim][dim]
-	float* maskx = (float*)malloc(mask_memory_size);
-	float* masky = (float*)malloc(mask_memory_size);
+	float* maskx = new float[mask_memory_size];
+	float* masky = new float[mask_memory_size];
 
 	// Step 1: Creation of mask arrays using the Gaussian derivative formula
 	prepare_mask_arrays(maskx, masky, dim, sig);
@@ -134,23 +121,21 @@ int canny_main(uint8_t* img, uint8_t* final) {
 		return EXIT_FAILURE;
 	}
 
-	int width = 256, height = 256, channels = 1, total_images = 2;
-
 	cudaEvent_t start_G, stop_G;
 
 	cudaEventCreate(&start_G);
 	cudaEventCreate(&stop_G);
 
-	float* x = new float[width * height];
-	float* y = new float[width * height];
+	float* x = new float[IMAGE_WIDTH * IMAGE_HEIGHT];
+	float* y = new float[IMAGE_WIDTH * IMAGE_HEIGHT];
 
 	float* dev_x;
 	float* dev_y;
 	uint8_t* dev_pixels;
 
-	unsigned int mem_size_x = sizeof(float) * width * height;
-	unsigned int mem_size_y = sizeof(float) * width * height;
-	unsigned int img_size = width * height * channels;
+	unsigned int mem_size_x = sizeof(float) * IMAGE_WIDTH * IMAGE_HEIGHT;
+	unsigned int mem_size_y = sizeof(float) * IMAGE_WIDTH * IMAGE_HEIGHT;
+	unsigned int img_size = IMAGE_WIDTH * IMAGE_HEIGHT;
 	unsigned int mem_size_img = sizeof(uint8_t) * img_size;
 
 	// allocate memory for x[] on the device(GPU)
@@ -187,14 +172,14 @@ int canny_main(uint8_t* img, uint8_t* final) {
 	dim3 grid((WB - 1) / (BLOCK_SIZE - WC + 1), (WB - 1) / (BLOCK_SIZE - WC + 1));
 
 	cudaEventRecord(start_G);
-	convolution_kernel << < grid, threads >> > (dev_pixels, dev_x, dev_mask_x, height, width, height, width, dim);
+	convolution_kernel << < grid, threads >> > (dev_pixels, dev_x, dev_mask_x, IMAGE_HEIGHT, IMAGE_WIDTH, IMAGE_HEIGHT, IMAGE_WIDTH, dim);
 	cudaEventRecord(stop_G);
 
 	cudaEventRecord(start_G);
-	convolution_kernel << < grid, threads >> > (dev_pixels, dev_y, dev_mask_y, height, width, height, width, dim);
+	convolution_kernel << < grid, threads >> > (dev_pixels, dev_y, dev_mask_y, IMAGE_HEIGHT, IMAGE_WIDTH, IMAGE_HEIGHT, IMAGE_WIDTH, dim);
 	cudaEventRecord(stop_G);
 
-	float* mag = new float[height * width];
+	float* mag = new float[IMAGE_HEIGHT * IMAGE_WIDTH];
 
 	// After this step, we'll get the convolution in x direction and y direction in
 	// the arrays x and y, which would later be used to generate vector of peaks
@@ -217,7 +202,7 @@ int canny_main(uint8_t* img, uint8_t* final) {
 	float* dev_mag;
 
 	// allocate image memory on the device(GPU)
-	error = cudaMalloc((void**)&dev_mag, sizeof(float) * height * width);
+	error = cudaMalloc((void**)&dev_mag, sizeof(float) * IMAGE_HEIGHT * IMAGE_WIDTH);
 	if (error != cudaSuccess) {
 		printf("device image memory allocation failed");
 		return EXIT_FAILURE;
@@ -228,24 +213,24 @@ int canny_main(uint8_t* img, uint8_t* final) {
 
 	// Step 4: Get the magnitude matrix using the x[] and y[] that we got from the previous step
 
-	magnitude_matrix_kernel << <num_blocks, threads_per_block >> > (dev_mag, dev_x, dev_y, height, width);
+	magnitude_matrix_kernel << <num_blocks, threads_per_block >> > (dev_mag, dev_x, dev_y, IMAGE_HEIGHT, IMAGE_WIDTH);
 
 	// Copy back the contents of dev_mag to the host
 
-	error = cudaMemcpy(mag, dev_mag, sizeof(float) * height * width, cudaMemcpyDeviceToHost);
+	error = cudaMemcpy(mag, dev_mag, sizeof(float) * IMAGE_HEIGHT * IMAGE_WIDTH, cudaMemcpyDeviceToHost);
 	if (error != cudaSuccess) {
 		printf("Copying back mag[] to the host failed");
 		return EXIT_FAILURE;
 	}
 
-	getNormalisedMagnitudeMatrix(mag, height, width);
+	getNormalisedMagnitudeMatrix(mag, IMAGE_HEIGHT, IMAGE_WIDTH);
 
 	//printf("\n\nMagnitude Matrix After: \n");
-	//printArrayForDebugging(mag, height, width);
+	//printArrayForDebugging(mag, IMAGE_HEIGHT, IMAGE_WIDTH);
 
 	// Step 5: Get all the peaks and store them in a vector
 	unordered_map<Pixel*, bool> peaks;
-	vector<Pixel*> vector_of_peaks = peak_detection(mag, peaks, x, y, height, width);
+	vector<Pixel*> vector_of_peaks = peak_detection(mag, peaks, x, y, IMAGE_HEIGHT, IMAGE_WIDTH);
 
 	// Step 6: Creation of the final image matrix using the magnitude matrix and
 	// Recursive Double Thresholding
@@ -260,14 +245,14 @@ int canny_main(uint8_t* img, uint8_t* final) {
 		a = vector_of_peaks.at(i)->x;
 		b = vector_of_peaks.at(i)->y;
 
-		if (mag[a * width + b] >= hi) {
-			final[a * width + b] = 255;
+		if (mag[a * IMAGE_WIDTH + b] >= hi) {
+			final[a * IMAGE_WIDTH + b] = 255;
 		}
-		else if (mag[a * width + b] < lo) {
-			final[a * width + b] = 0;
+		else if (mag[a * IMAGE_WIDTH + b] < lo) {
+			final[a * IMAGE_WIDTH + b] = 0;
 		}
 		else {
-			recursiveDoubleThresholding(mag, final, visited, peaks, a, b, 0, width, height, lo);
+			recursiveDoubleThresholding(mag, final, visited, peaks, a, b, 0, IMAGE_WIDTH, IMAGE_HEIGHT, lo);
 		}
 	}
 
@@ -279,8 +264,8 @@ int canny_main(uint8_t* img, uint8_t* final) {
 	cudaFree(dev_pixels);
 	cudaFree(dev_mag);
 
-	free(maskx);
-	free(masky);
+	delete[] maskx;
+	delete[] masky;
 	cudaFree(dev_mask_x);
 	cudaFree(dev_mask_y);
 
