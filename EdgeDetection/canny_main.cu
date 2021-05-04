@@ -1,5 +1,4 @@
 #include "canny_cpu.cuh"
-// #include "global.hpp"
 #include "pixel.cuh"
 #include "canny.cuh"
 #include <iostream>
@@ -25,9 +24,14 @@ int intensity;
 #define WB (WA - WC + 1)
 #define HB (HA - HC + 1)
 
-// int hi;
-// int lo;
-// double sig;
+void printArrayForDebugging(float *arr, int height, int width) {
+    for (int i=0; i<height; i++) {
+        for (int j=0; j<width; j++) {
+            printf("%f ", arr[i*width + j]);
+        }
+        printf("\n");
+    }
+}
 
 void prepare_mask_arrays(float* maskx, float* masky, size_t dimension, int sigma) {
 
@@ -69,6 +73,9 @@ float* getPixelsFromPngImage(unsigned char *img, int width, int height, int chan
 
 void getNormalisedMagnitudeMatrix(float* mag, unsigned int height, unsigned int width) {
 
+    // printf("\n\nMagnitude matrix before normalisation:\n");
+    // printArrayForDebugging(mag, height, width);
+
     float maxVal = 0.0;
     unsigned int i, j;
 	for (i = 0; i < height; i++) {
@@ -77,7 +84,9 @@ void getNormalisedMagnitudeMatrix(float* mag, unsigned int height, unsigned int 
                 maxVal = mag[i * width + j];     
             }
 		}
-	}
+    }
+    
+    // printf("maxVal: %f\n", maxVal);
 
 	// Make sure all the magnitude values are between 0-255
     for (i = 0; i < height; i++)
@@ -87,21 +96,12 @@ void getNormalisedMagnitudeMatrix(float* mag, unsigned int height, unsigned int 
     return;        
 }
 
-void printArrayForDebugging(float *arr, int height, int width) {
-    for (int i=0; i<height; i++) {
-        for (int j=0; j<width; j++) {
-            printf("%f ", arr[i*width + j]);
-        }
-        printf("\n");
-    }
-}
-
 // =================================== Magnitude Image ==================================
 // We'll start by filling in the mask values using the Gausian 1st derivative. Next, do a
 // scanning convolution on the input pic matrix. This will give us the Δy and Δx matrices
 // Finally, take the sqrt of the sum of Δy^2 and Δx^2 to find the magnitude.
 // =================================== Magnitude Image ==================================
-void magnitude_matrix(float *pic, float *mag, float *x, float *y, float *maskx, float *masky, double sig, int height, int width) {
+void magnitude_matrix(float *pic, float *x, float *y, float *maskx, float *masky, double sig, int height, int width) {
     
     int dim = 6 * sig + 1, cent = dim / 2;
 
@@ -146,53 +146,21 @@ void magnitude_matrix(float *pic, float *mag, float *x, float *y, float *maskx, 
 		}
     }
     
-    printf("\n\n X Matrix : \n");
-    printArrayForDebugging(x, height, width);
-    printf("\n\n Y Matrix : \n");
-    printArrayForDebugging(y, height, width);    
-
-	// Find magnitude and maxVal, then store it in the 'mag' matrix
-	double mags;
-	double maxVal = 0;
-	for (int i = 0; i < height; i++)
-	{
-		for(int j = 0; j < width; j++)
-		{
-			mags = sqrt((x[i * width + j] * x[i * width + j]) + (y[i * width + j] * y[i * width + j]));
-
-			if (mags > maxVal)
-				maxVal = mags;
-
-			mag[i * width + j] = mags;
-		}
-    }
-    
-    printf("maxVal: %f\n", maxVal);
-
-	// Make sure all the magnitude values are between 0-255
-	for (int i = 0; i < height; i++)
-		for (int j = 0; j < width; j++)
-            if (maxVal != 0)    
-                mag[i * width + j] = mag[i * width + j] / maxVal * 255;
+    // printf("\n\n X Matrix : \n");
+    // printArrayForDebugging(x, height, width);
+    // printf("\n\n Y Matrix : \n");
+    // printArrayForDebugging(y, height, width);    
 
 	return;
 }
 
 int main(int argc, char **argv)
 {
-	// Exit program if proper arguments are not provided by user
-    /*
-    if (argc != 4)
-	{
-		cout << "Proper syntax: ./a.out <input_filename> <high_threshold> <sigma_value>" << endl;
-		return 0;
-    }
-    */
 
     double sig = 1;
     int dim = 6 * sig + 1, cent = dim / 2;
 
-    const int hi = 50;
+    const int hi = 40;
     const int lo = .35 * hi; 
 
     cudaError_t error;
@@ -333,25 +301,42 @@ int main(int argc, char **argv)
 
         // convolve(pixels, dev_x, dev_y, dev_mask_x, dev_mask_y, height, width, height, width, dim); 
 
+        float* mag = new float[height*width];
+        
+        // For isolating the parallel implementation changes of Magnitude Matrix calculation
+        magnitude_matrix(pixels, x, y, maskx, masky, sig, height, width);
+
+        // Copying the content of x[] to the device(GPU)
+        error = cudaMemcpy(dev_x, x, mem_size_x, cudaMemcpyHostToDevice);
+        if (error != cudaSuccess) {
+            printf("Copying the pixels[] to device failed");
+            return EXIT_FAILURE;
+        }  
+
+        // Copying the content of y[] to the device(GPU)
+        error = cudaMemcpy(dev_y, y, mem_size_y, cudaMemcpyHostToDevice);
+        if (error != cudaSuccess) {
+            printf("Copying the pixels[] to device failed");
+            return EXIT_FAILURE;
+        }  
+        
         // After this step, we'll get the convolution in x direction and y direction in
         // the arrays x and y, which would later be used to generate vector of peaks
         // which in turn is used for creating the final array. 
 
         // Copy back the contents of dev_y to the host
-        error = cudaMemcpy(y, dev_y, mask_memory_size, cudaMemcpyDeviceToHost);
+        error = cudaMemcpy(y, dev_y, mem_size_y, cudaMemcpyDeviceToHost);
         if (error != cudaSuccess) {
             printf("Copying back y[] to the host failed");
             return EXIT_FAILURE;
         }
 
         // Copy back the contents of dev_x to the host
-        error = cudaMemcpy(x, dev_x, mask_memory_size, cudaMemcpyDeviceToHost);
+        error = cudaMemcpy(x, dev_x, mem_size_x, cudaMemcpyDeviceToHost);
         if (error != cudaSuccess) {
             printf("Copying back x[] to the host failed");
             return EXIT_FAILURE;
         }  
-
-        float* mag = new float[height*width];
 
         float* dev_mag;
 
@@ -363,39 +348,24 @@ int main(int argc, char **argv)
 		}
 
         const int threads_per_block = 256;
-		int num_blocks = (img_size + threads_per_block - 1) / threads_per_block;
-
+        int num_blocks = (img_size + threads_per_block - 1) / threads_per_block;
+        
         // Step 4: Get the magnitude matrix using the x[] and y[] that we got from the previous step
 
-        // magnitude_matrix_kernel <<<num_blocks, threads_per_block>>> (dev_mag, dev_x, dev_y, height, width);
+        magnitude_matrix_kernel <<<num_blocks, threads_per_block>>> (dev_mag, dev_x, dev_y, height, width);
 
         // Copy back the contents of dev_mag to the host
-        /*
+        
         error = cudaMemcpy(mag, dev_mag, sizeof(float) * height * width, cudaMemcpyDeviceToHost);
         if (error != cudaSuccess) {
             printf("Copying back mag[] to the host failed");
             return EXIT_FAILURE;
         }
 
-        getNormalisedMagnitudeMatrix(mag, height, width);  
-        */
-
-        printf("\n\nMagnitude Matrix Before: \n");
-        for (i=0; i<height; i++) {
-            for (j=0; j<width; j++) {
-                printf("%f ", mag[i*width + j]);
-            }
-            printf("\n");
-        }
-        magnitude_matrix(pixels, mag, x, y, maskx, masky, sig, height, width);
+        getNormalisedMagnitudeMatrix(mag, height, width);          
 
         printf("\n\nMagnitude Matrix After: \n");
-        for (i=0; i<height; i++) {
-            for (j=0; j<width; j++) {
-                printf("%f ", mag[i*width + j]);
-            }
-            printf("\n");
-        }
+        printArrayForDebugging(mag, height, width);
 
 
         // Step 5: Get all the peaks and store them in a vector
@@ -425,16 +395,13 @@ int main(int argc, char **argv)
                 recursiveDoubleThresholding(mag, final, visited, peaks, a, b, 0, width, height, lo);
         }
 
-        /*
-        printf("\n\nLet the magic begin!\n");
-
-        for (i=0; i<height; i++) {
-            for (j=0; j<width; j++) {
+        printf("\n\nFinal Image Matrix: \n");
+        for (int i=0; i<height; i++) {
+            for (int j=0; j<width; j++) {
                 printf("%u ", final[i*width + j]);
             }
             printf("\n");
         }
-        */
         
         // Final step : Storing the final image matrix in the Device/GPU global memory
         // for further processing in the Hough transform step
@@ -490,62 +457,6 @@ int main(int argc, char **argv)
     free(masky);
     cudaFree(dev_mask_x);
     cudaFree(dev_mask_y);
-
-	// Exit program if file doesn't open
-	// string filename(argv[1]);
-	// string path = "./input_images/" + filename;
-	// ifstream infile(path, ios::binary);
-	// if (!infile.is_open())
-	// {
-	// 	cout << "File " << path << " not found in directory." << endl;
-	// 	return 0;
-	// }	
-
-	// Opening output files
-	// ofstream img1("./output_images/canny_mag.pgm", ios::binary);
-	// ofstream img2("./output_images/canny_peaks.pgm", ios::binary);		
-	// ofstream img3("./output_images/canny_final.pgm", ios::binary);
-
-	// ::hi = stoi(argv[2]);
-	// ::lo = .35 * hi;
-	// ::sig = stoi(argv[3]);
-
-	// Storing header information and copying into the new ouput images
-	// infile >> ::type >> width >> height >> ::intensity;
-	// img1 << type << endl << width << " " << height << endl << intensity << endl;
-	// img2 << type << endl << width << " " << height << endl << intensity << endl;
-	// img3 << type << endl << width << " " << height << endl << intensity << endl;
-
-	// These matrices will hold the integer values of the input image and masks.
-	// I'm dynamically allocating arrays to easily pass them into functions.
-	/*
-    double **pic = new double*[height], **mag = new double*[height], **final = new double*[height];
-	double **x = new double*[height], **y = new double*[height];
-
-	
-    for (int i = 0; i < height; i++)
-	{
-		pic[i] = new double[width];
-		mag[i] = new double[width];
-		final[i] = new double[width];
-		x[i] = new double[width];
-		y[i] = new double[width];
-	}
-    */
-
-	// Reading in the input image as integers
-	/*
-    for (int i = 0; i < height; i++)
-		for (int j = 0; j < width; j++)
-			pic[i][j] = (int)infile.get();
-
-    convolve(pic, x, y, maskx, masky, height, width, height, width);        
-    */
-	// Create the magniute matrix
-	// magnitude_matrix(pic, mag, x, y);
-
-
-	
 
 	// ================================= IMAGE OUTPUT =================================
 	// Outputting the 'mag' matrix to img1. It's very important to cast it to a char.

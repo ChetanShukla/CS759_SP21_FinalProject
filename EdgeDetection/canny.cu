@@ -92,7 +92,7 @@ __global__ void magnitude_matrix_kernel(float* mag, const float* x, const float*
     int array_upper_bound = width * height;
 
     if (index < array_upper_bound) {
-        float mags = x[index] * x[index] + y[index] * y[index];
+        float mags = sqrt(x[index] * x[index] + y[index] * y[index]);
         mag[index] = mags;
     }
 }
