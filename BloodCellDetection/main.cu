@@ -23,7 +23,7 @@ int main() {
 			printf("Processing image: %s\n", full_path.c_str());
 		}
 
-		unsigned char* img = stbi_load(full_path.c_str(), &img_width, &img_height, &img_channels, 0);
+		uint8_t* img = stbi_load(full_path.c_str(), &img_width, &img_height, &img_channels, 0);
 		if (img == NULL || img_width != IMAGE_WIDTH || img_height != IMAGE_HEIGHT || img_channels != 1) {
 			printf("Error in loading the image\n");
 			exit(1);

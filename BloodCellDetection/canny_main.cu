@@ -85,7 +85,7 @@ void getNormalisedMagnitudeMatrix(float* mag, unsigned int height, unsigned int 
 	return;
 }
 
-int canny_main(unsigned char* img, uint8_t* final) {
+int canny_main(uint8_t* img, uint8_t* final) {
 	double sig = 1;
 	int dim = 6 * sig + 1, cent = dim / 2;
 
@@ -136,9 +136,6 @@ int canny_main(unsigned char* img, uint8_t* final) {
 
 	int width = 256, height = 256, channels = 1, total_images = 2;
 
-	// Step 2 : PNG image to 2D matrix
-	float* pixels = getPixelsFromPngImage(img, width, height, channels);
-
 	cudaEvent_t start_G, stop_G;
 
 	cudaEventCreate(&start_G);
@@ -149,12 +146,12 @@ int canny_main(unsigned char* img, uint8_t* final) {
 
 	float* dev_x;
 	float* dev_y;
-	float* dev_pixels;
+	uint8_t* dev_pixels;
 
 	unsigned int mem_size_x = sizeof(float) * width * height;
 	unsigned int mem_size_y = sizeof(float) * width * height;
 	unsigned int img_size = width * height * channels;
-	unsigned int mem_size_img = sizeof(float) * img_size;
+	unsigned int mem_size_img = sizeof(uint8_t) * img_size;
 
 	// allocate memory for x[] on the device(GPU)
 	error = cudaMalloc((void**)&dev_x, mem_size_x);
@@ -178,7 +175,7 @@ int canny_main(unsigned char* img, uint8_t* final) {
 	}
 
 	// Copying the content of pixels[] to the device(GPU)
-	error = cudaMemcpy(dev_pixels, pixels, mem_size_img, cudaMemcpyHostToDevice);
+	error = cudaMemcpy(dev_pixels, img, mem_size_img, cudaMemcpyHostToDevice);
 	if (error != cudaSuccess) {
 		printf("Copying the pixels[] to device failed");
 		return EXIT_FAILURE;
@@ -274,45 +271,6 @@ int canny_main(unsigned char* img, uint8_t* final) {
 		}
 	}
 
-	/*printf("\n\nFinal Image Matrix: \n");
-	for (int i = 0; i < height; i++) {
-		for (int j = 0; j < width; j++) {
-			printf("%u ", final[i * width + j]);
-		}
-		printf("\n");
-	}*/
-
-	// Final step : Storing the final image matrix in the Device/GPU global memory
-	// for further processing in the Hough transform step
-
-	uint8_t* dev_final_image;
-
-	// allocate image memory on the device(GPU)
-	error = cudaMalloc((void**)&dev_final_image, sizeof(uint8_t) * img_size);
-	if (error != cudaSuccess) {
-		printf("device image memory allocation failed");
-		return EXIT_FAILURE;
-	}
-
-	// put the image on the device
-	error = cudaMemcpy(dev_final_image, final, sizeof(uint8_t) * img_size, cudaMemcpyHostToDevice);
-	if (error != cudaSuccess) {
-		printf("image move to device failed");
-		return EXIT_FAILURE;
-	}
-
-	//// Convert the input image to output image
-	//unsigned char* output_img = (unsigned char*)malloc(img_size);
-	//if (output_img == NULL) {
-	//	printf("Unable to allocate memory for the output image.\n");
-	//	exit(1);
-	//}
-
-	//unsigned int i = 0;
-	//for (unsigned char* pg = output_img; i < img_size; i += channels, pg += channels) {
-	//	*pg = final[i];
-	//}
-
 	delete[] x;
 	delete[] y;
 	delete[] mag;
@@ -320,8 +278,6 @@ int canny_main(unsigned char* img, uint8_t* final) {
 	cudaFree(dev_y);
 	cudaFree(dev_pixels);
 	cudaFree(dev_mag);
-	cudaFree(dev_final_image);
-	free(pixels);
 
 	free(maskx);
 	free(masky);

@@ -13,7 +13,7 @@ The output of this step is stored in the output array.
 
 ========================================================================================================================
 **/
-__global__ void convolution_kernel(const float* image, float* output, const float* mask,
+__global__ void convolution_kernel(const uint8_t* image, float* output, const float* mask,
 	int imageRows, int imageCols, int outputRows, int outputCols,
 	int maskDimension) {
 	int tx = threadIdx.x;
@@ -31,7 +31,7 @@ __global__ void convolution_kernel(const float* image, float* output, const floa
 	__shared__ float sharedMem[BLOCK_SIZE][BLOCK_SIZE];
 
 	if (row_i < imageRows && row_i >= 0 && col_i < imageCols && col_i >= 0) {
-		sharedMem[ty][tx] = image[row_i * imageCols + col_i];
+		sharedMem[ty][tx] = (float)image[row_i * imageCols + col_i];
 	}
 	else {
 		sharedMem[ty][tx] = 0;
