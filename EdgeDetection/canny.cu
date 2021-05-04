@@ -1,15 +1,9 @@
 #include "canny.cuh"
 #include "pixel.cuh"
-
-using namespace std;
-
-#include "cuda_runtime.h"
-#include "device_launch_parameters.h"
-
 #include <stdio.h>
 #include <cstdlib>
-
 #define BLOCK_SIZE 32
+using namespace std;
 
 /**
 =========================================== Kernel Convolution =========================================================

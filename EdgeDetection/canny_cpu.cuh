@@ -4,11 +4,11 @@
 #include "pixel.cuh"
 #include <unordered_map>
 #include <vector>
-#include <cmath>
+#include <stdint.h>
 
 using namespace std;
 
-std::vector<Pixel*> peak_detection(float* mag, unordered_map<Pixel*, bool> peaks, float* x, float* y,
+vector<Pixel*> peak_detection(float* mag, unordered_map<Pixel*, bool> peaks, float* x, float* y,
 	const int height, const int width);
 
 void recursiveDoubleThresholding(float* mag, uint8_t* final, unordered_map<Pixel*, bool> visited, unordered_map<Pixel*, bool> peaks,

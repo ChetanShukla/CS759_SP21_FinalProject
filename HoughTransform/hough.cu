@@ -1,5 +1,5 @@
 ﻿#include "hough.cuh"
-#include <fstream>
+#include <cstdlib>
 #include <math_constants.h>
 #define NUM_DEGREE_CALC 256
 using namespace std;
