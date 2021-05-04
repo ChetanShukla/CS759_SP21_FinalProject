@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.31019.35
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "HoughTransform", "HoughTransform.vcxproj", "{6AEDEA11-EF4C-4A2D-A93F-F9B034F8C9FB}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "BloodCellDetection", "BloodCellDetection.vcxproj", "{4FE455C4-702C-411B-AA78-06DA056F9BC3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -11,15 +11,15 @@ Global
 		Release|x64 = Release|x64
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{6AEDEA11-EF4C-4A2D-A93F-F9B034F8C9FB}.Debug|x64.ActiveCfg = Debug|x64
-		{6AEDEA11-EF4C-4A2D-A93F-F9B034F8C9FB}.Debug|x64.Build.0 = Debug|x64
-		{6AEDEA11-EF4C-4A2D-A93F-F9B034F8C9FB}.Release|x64.ActiveCfg = Release|x64
-		{6AEDEA11-EF4C-4A2D-A93F-F9B034F8C9FB}.Release|x64.Build.0 = Release|x64
+		{4FE455C4-702C-411B-AA78-06DA056F9BC3}.Debug|x64.ActiveCfg = Debug|x64
+		{4FE455C4-702C-411B-AA78-06DA056F9BC3}.Debug|x64.Build.0 = Debug|x64
+		{4FE455C4-702C-411B-AA78-06DA056F9BC3}.Release|x64.ActiveCfg = Release|x64
+		{4FE455C4-702C-411B-AA78-06DA056F9BC3}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {983D3780-72C7-4672-9649-D2956C047F95}
+		SolutionGuid = {930C350F-7734-4977-8B15-825B336972FE}
 	EndGlobalSection
 EndGlobal
