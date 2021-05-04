@@ -19,19 +19,18 @@ The output of this step is stored in the output array.
 
 ========================================================================================================================
 **/
-__global__ void convolution_kernel(const float* image, float* output, const float* mask, 
-                                    int imageRows, int imageCols, int outputRows, int outputCols, 
-                                    int maskDimension) {
+__global__ void convolution_kernel(const float* image, float* output, const float* mask,
+	int imageRows, int imageCols, int outputRows, int outputCols,
+	int maskDimension) {
+	int tx = threadIdx.x;
+	int ty = threadIdx.y;
+	const int TILE_SIZE = (BLOCK_SIZE - maskDimension + 1);
 
-    int tx = threadIdx.x;
-    int ty = threadIdx.y; 
-    const int TILE_SIZE = (BLOCK_SIZE - maskDimension + 1);                                   
-    
-    int col = blockIdx.x * TILE_SIZE + tx;
+	int col = blockIdx.x * TILE_SIZE + tx;
 	int row = blockIdx.y * TILE_SIZE + ty;
-    
-    int row_i = row - maskDimension/2;
-    int col_i = col - maskDimension/2;
+
+	int row_i = row - maskDimension / 2;
+	int col_i = col - maskDimension / 2;
 
 	float tmp = 0;
 
@@ -46,27 +45,25 @@ __global__ void convolution_kernel(const float* image, float* output, const floa
 
 	__syncthreads();
 
-    if (ty < TILE_SIZE && tx < TILE_SIZE) {
-        for (int i=0; i<maskDimension; i++) {
-            for(int j=0; j<maskDimension; j++) {
-                tmp += mask[i * maskDimension + j] * sharedMem[ty + i][tx + j];
-            }
-        }
-        __syncthreads();
-        if (row < outputRows && col < outputCols) {
-            output[row * outputCols + col] = tmp;
-        }
-    } 
-    
+	if (ty < TILE_SIZE && tx < TILE_SIZE) {
+		for (int i = 0; i < maskDimension; i++) {
+			for (int j = 0; j < maskDimension; j++) {
+				tmp += mask[i * maskDimension + j] * sharedMem[ty + i][tx + j];
+			}
+		}
+		__syncthreads();
+		if (row < outputRows && col < outputCols) {
+			output[row * outputCols + col] = tmp;
+		}
+	}
 }
 
 __global__ void magnitude_matrix_kernel(float* mag, const float* x, const float* y, const int height, const int width) {
+	int index = blockDim.x * blockIdx.x + threadIdx.x;
+	int array_upper_bound = width * height;
 
-    int index = blockDim.x * blockIdx.x + threadIdx.x;
-    int array_upper_bound = width * height;
-
-    if (index < array_upper_bound) {
-        float mags = sqrt(x[index] * x[index] + y[index] * y[index]);
-        mag[index] = mags;
-    }
+	if (index < array_upper_bound) {
+		float mags = sqrt(x[index] * x[index] + y[index] * y[index]);
+		mag[index] = mags;
+	}
 }
