@@ -2,6 +2,8 @@
 #include <fstream>
 #include <iostream>
 #include <string>
+#include "cuda_runtime.h"
+#include "device_launch_parameters.h"
 
 #include "hough.cuh"
 using namespace std;
@@ -12,7 +14,7 @@ using namespace std;
 #define NUM_RADIUS 3
 #define TOTAL_ACC_SIZE ACCUMULATOR_SIZE * ACCUMULATOR_SIZE * NUM_RADIUS
 
-int main()
+int start()
 {
 	const string input_dir = "C:\\Users\\djkong7\\Documents\\GitHub\\CS759_SP21_FinalProject\\processed_images\\edges\\binary\\";
 	const string output_dir = "C:\\Users\\djkong7\\Documents\\GitHub\\CS759_SP21_FinalProject\\processed_images\\hough\\binary\\";

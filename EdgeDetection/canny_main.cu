@@ -5,6 +5,7 @@
 #include <cuda.h>
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
+#include <string>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
@@ -147,9 +148,9 @@ int main(int argc, char** argv) {
 		*/
 
 		string filename = "image-" + to_string(image_count) + ".png";
-		string path = "./processed_images/" + filename;
+		string path = "../processed_images/gray/" + filename;
 
-		cout << "\nProcessing Image: " << path << "\n\n";
+		//cout << "\nProcessing Image: " << path << "\n\n";
 
 		unsigned char* img = stbi_load(path.c_str(), &width, &height, &channels, 0);
 		if (img == NULL) {
@@ -160,7 +161,6 @@ int main(int argc, char** argv) {
 
 		// Step 2 : PNG image to 2D matrix
 		float* pixels = getPixelsFromPngImage(img, width, height, channels);
-		unsigned int i = 0;
 
 		cudaEvent_t start_G, stop_G;
 
@@ -266,8 +266,8 @@ int main(int argc, char** argv) {
 
 		getNormalisedMagnitudeMatrix(mag, height, width);
 
-		printf("\n\nMagnitude Matrix After: \n");
-		printArrayForDebugging(mag, height, width);
+		//printf("\n\nMagnitude Matrix After: \n");
+		//printArrayForDebugging(mag, height, width);
 
 		// Step 5: Get all the peaks and store them in a vector
 		unordered_map<Pixel*, bool> peaks;
@@ -275,7 +275,7 @@ int main(int argc, char** argv) {
 
 		// Step 6: Creation of the final image matrix using the magnitude matrix and
 		// Recursive Double Thresholding
-		uint8_t* final = new uint8_t[img_size];
+		uint8_t* final = new uint8_t[img_size]{ 0 };
 
 		// Go through the vector and call the recursive function and each point. If the value
 		// in the mag matrix is hi, then immediately accept it in final. If lo, then immediately
@@ -287,21 +287,24 @@ int main(int argc, char** argv) {
 			a = vector_of_peaks.at(i)->x;
 			b = vector_of_peaks.at(i)->y;
 
-			if (mag[a * width + b] >= hi)
+			if (mag[a * width + b] >= hi) {
 				final[a * width + b] = 255;
-			else if (mag[a * width + b] < lo)
+			}
+			else if (mag[a * width + b] < lo) {
 				final[a * width + b] = 0;
-			else
+			}
+			else {
 				recursiveDoubleThresholding(mag, final, visited, peaks, a, b, 0, width, height, lo);
+			}
 		}
 
-		printf("\n\nFinal Image Matrix: \n");
+		/*printf("\n\nFinal Image Matrix: \n");
 		for (int i = 0; i < height; i++) {
 			for (int j = 0; j < width; j++) {
 				printf("%u ", final[i * width + j]);
 			}
 			printf("\n");
-		}
+		}*/
 
 		// Final step : Storing the final image matrix in the Device/GPU global memory
 		// for further processing in the Hough transform step
@@ -322,20 +325,20 @@ int main(int argc, char** argv) {
 			return EXIT_FAILURE;
 		}
 
-		// Convert the input image to output image
-		unsigned char* output_img = (unsigned char*)malloc(img_size);
-		if (output_img == NULL) {
-			printf("Unable to allocate memory for the output image.\n");
-			exit(1);
-		}
+		//// Convert the input image to output image
+		//unsigned char* output_img = (unsigned char*)malloc(img_size);
+		//if (output_img == NULL) {
+		//	printf("Unable to allocate memory for the output image.\n");
+		//	exit(1);
+		//}
 
-		i = 0;
-		for (unsigned char* pg = output_img; i < img_size; i += channels, pg += channels) {
-			*pg = final[i];
-		}
+		//unsigned int i = 0;
+		//for (unsigned char* pg = output_img; i < img_size; i += channels, pg += channels) {
+		//	*pg = final[i];
+		//}
 
-		string output_path = "./processed_images/output_" + filename;
-		stbi_write_png(output_path.c_str(), width, height, channels, output_img, width * channels);
+		string output_path = "../processed_images/edges/" + filename;
+		stbi_write_png(output_path.c_str(), width, height, channels, final, width * channels);
 
 		stbi_image_free(img);
 

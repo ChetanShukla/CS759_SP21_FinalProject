@@ -10,6 +10,22 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <ItemGroup>
+    <CudaCompile Include="..\EdgeDetection\canny.cu" />
+    <CudaCompile Include="..\EdgeDetection\canny_cpu.cu" />
+    <CudaCompile Include="..\EdgeDetection\canny_main.cu" />
+    <CudaCompile Include="..\EdgeDetection\pixel.cu" />
+    <CudaCompile Include="..\HoughTransform\hough.cu" />
+    <CudaCompile Include="..\HoughTransform\main.cu" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\EdgeDetection\canny.cuh" />
+    <ClInclude Include="..\EdgeDetection\canny_cpu.cuh" />
+    <ClInclude Include="..\EdgeDetection\pixel.cuh" />
+    <ClInclude Include="..\EdgeDetection\stb_image.h" />
+    <ClInclude Include="..\EdgeDetection\stb_image_write.h" />
+    <ClInclude Include="..\HoughTransform\hough.cuh" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{4FE455C4-702C-411B-AA78-06DA056F9BC3}</ProjectGuid>
     <RootNamespace>BloodCellDetection</RootNamespace>
@@ -76,9 +92,6 @@
       <TargetMachinePlatform>64</TargetMachinePlatform>
     </CudaCompile>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <CudaCompile Include="kernel.cu" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
     <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 11.2.targets" />
