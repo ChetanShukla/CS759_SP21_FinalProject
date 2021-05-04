@@ -13,9 +13,6 @@
 
 using namespace std;
 
-char type[10];
-int intensity;
-
 #define BLOCK_SIZE 32
 #define WA 256   
 #define HA 256     
@@ -62,7 +59,7 @@ float* getPixelsFromPngImage(unsigned char *img, int width, int height, int chan
     size_t img_size = width * height * channels;
     float *pixels = (float*) malloc(sizeof(float) * img_size);
 
-    unsigned int i = 0, j = 0;
+    unsigned int i = 0;
     for(unsigned char *p = img; p != img + img_size; p += channels) {
         *(pixels + i) = (float) *p;
         i++;
@@ -96,66 +93,7 @@ void getNormalisedMagnitudeMatrix(float* mag, unsigned int height, unsigned int 
     return;        
 }
 
-// =================================== Magnitude Image ==================================
-// We'll start by filling in the mask values using the Gausian 1st derivative. Next, do a
-// scanning convolution on the input pic matrix. This will give us the Δy and Δx matrices
-// Finally, take the sqrt of the sum of Δy^2 and Δx^2 to find the magnitude.
-// =================================== Magnitude Image ==================================
-void magnitude_matrix(float *pic, float *x, float *y, float *maskx, float *masky, double sig, int height, int width) {
-    
-    int dim = 6 * sig + 1, cent = dim / 2;
-
-    printf("Pic: \n");
-    printArrayForDebugging(pic, height, width);
-
-	// Scanning convolution
-	float sumx, sumy;
-	for (int i = 0; i < height; i++)
-	{ 
-		for (int j = 0; j < width; j++)
-		{
-			sumx = 0;
-			sumy = 0;
-
-			// This is the convolution
-			for (int p = -cent; p <= cent; p++)
-			{
-				for (int q = -cent; q <= cent; q++)
-				{
-					//if ((i+p) < 0 || (j+q) < 0 || (i+p) >= height || (j+q) >= width)
-					//	continue;
-                    
-                    int rowIndex = i+p;
-                    int colIndex = j+q;  
-                    int maskRowIndex = p + cent;
-                    int maskColIndex = q + cent; 
-                    
-                    if ((rowIndex * width + colIndex) < 0 || (maskRowIndex * width + maskColIndex) < 0 
-                            || (rowIndex * width + colIndex) >= height*width 
-                            || (maskRowIndex * width + maskColIndex) >= height*width)
-						continue; 
-                    
-                    sumx += pic[rowIndex * width + colIndex] * maskx[maskRowIndex * dim + maskColIndex];
-					sumy += pic[rowIndex * width + colIndex] * masky[maskRowIndex * dim + maskColIndex];
-				}
-			}
-			
-			// Store convolution result in respective matrix
-			x[i * width + j] = sumx;
-			y[i * width + j] = sumy;
-		}
-    }
-    
-    // printf("\n\n X Matrix : \n");
-    // printArrayForDebugging(x, height, width);
-    // printf("\n\n Y Matrix : \n");
-    // printArrayForDebugging(y, height, width);    
-
-	return;
-}
-
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
 
     double sig = 1;
     int dim = 6 * sig + 1, cent = dim / 2;
@@ -228,18 +166,7 @@ int main(int argc, char **argv)
 
         // Step 2 : PNG image to 2D matrix
         float *pixels = getPixelsFromPngImage(img, width, height, channels);
-        unsigned int i = 0, j = 0; 
-        
-        /* 
-        printf("\n\nLet the magic begin!\n");
-
-        for (i=0; i<height; i++) {
-            for (j=0; j<width; j++) {
-                printf("%u ", pixels[i*height + j]);
-            }
-            printf("\n");
-        }
-        */
+        unsigned int i = 0; 
 
         cudaEvent_t start_G, stop_G;
         
@@ -292,33 +219,14 @@ int main(int argc, char **argv)
 	    dim3 grid((WB - 1) / (BLOCK_SIZE - WC + 1), (WB - 1) / (BLOCK_SIZE - WC + 1));
 
 	    cudaEventRecord(start_G);
-        // convolution_kernel <<< grid, threads >>> (dev_pixels, dev_x, dev_mask_x, height, width, height, width, dim);
+        convolution_kernel <<< grid, threads >>> (dev_pixels, dev_x, dev_mask_x, height, width, height, width, dim);
         cudaEventRecord(stop_G);
 
 	    cudaEventRecord(start_G);
-	    // convolution_kernel <<< grid, threads >>> (dev_pixels, dev_y, dev_mask_y, height, width, height, width, dim);
+	    convolution_kernel <<< grid, threads >>> (dev_pixels, dev_y, dev_mask_y, height, width, height, width, dim);
         cudaEventRecord(stop_G);
 
-        // convolve(pixels, dev_x, dev_y, dev_mask_x, dev_mask_y, height, width, height, width, dim); 
-
         float* mag = new float[height*width];
-        
-        // For isolating the parallel implementation changes of Magnitude Matrix calculation
-        magnitude_matrix(pixels, x, y, maskx, masky, sig, height, width);
-
-        // Copying the content of x[] to the device(GPU)
-        error = cudaMemcpy(dev_x, x, mem_size_x, cudaMemcpyHostToDevice);
-        if (error != cudaSuccess) {
-            printf("Copying the pixels[] to device failed");
-            return EXIT_FAILURE;
-        }  
-
-        // Copying the content of y[] to the device(GPU)
-        error = cudaMemcpy(dev_y, y, mem_size_y, cudaMemcpyHostToDevice);
-        if (error != cudaSuccess) {
-            printf("Copying the pixels[] to device failed");
-            return EXIT_FAILURE;
-        }  
         
         // After this step, we'll get the convolution in x direction and y direction in
         // the arrays x and y, which would later be used to generate vector of peaks
@@ -437,8 +345,7 @@ int main(int argc, char **argv)
 
         string output_path = "./processed_images/output_" + filename;
         stbi_write_png(output_path.c_str(), width, height, channels, output_img, width * channels);
-        // stbi_write_jpg("sky2.jpg", width, height, channels, img, 100);
-
+        
         stbi_image_free(img);
 
         delete[] x;
@@ -457,30 +364,6 @@ int main(int argc, char **argv)
     free(masky);
     cudaFree(dev_mask_x);
     cudaFree(dev_mask_y);
-
-	// ================================= IMAGE OUTPUT =================================
-	// Outputting the 'mag' matrix to img1. It's very important to cast it to a char.
-	// To make sure that the decimal doesn't produce any wonky results, cast to an int
-	// ================================= IMAGE OUTPUT =================================
-	/*
-    for (int i = 0; i < height; i++)
-		for (int j = 0; j < width; j++)
-			img1 << (char)((int)mag[i][j]);
-
-	// Outputting the points stored in the vector to img2
-	int k = 0;
-	for (int i = 0; i < vector_of_peaks.size(); i++)
-	{
-		while(k++ != (vector_of_peaks.at(i)->x * height + vector_of_peaks.at(i)->y - 1))
-			img2 << (char)(0);
-
-		img2 << (char)(255);
-	}
-
-	// Output the 'final' matrix to img1
-	for (int i = 0; i < height; i++)
-		for (int j = 0; j < width; j++)
-			img3 << (char)((int)final[i][j]);		
-    */
+	
 	return 0;
 }

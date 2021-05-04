@@ -1,5 +1,4 @@
 #include "canny.cuh"
-// #include "global.hpp"
 #include "pixel.cuh"
 
 using namespace std;
@@ -9,17 +8,8 @@ using namespace std;
 
 #include <stdio.h>
 #include <cstdlib>
-#include <time.h>
 
 #define BLOCK_SIZE 32
-#define WA 256   
-#define HA 256     
-#define HC 7     
-#define WC 7
-#define WB (WA - WC + 1)
-#define HB (HA - HC + 1)
-
-#define sig 1
 
 /**
 =========================================== Kernel Convolution =========================================================
@@ -32,34 +22,42 @@ The output of this step is stored in the output array.
 __global__ void convolution_kernel(const float* image, float* output, const float* mask, 
                                     int imageRows, int imageCols, int outputRows, int outputCols, 
                                     int maskDimension) {
+
+    int tx = threadIdx.x;
+    int ty = threadIdx.y; 
+    const int TILE_SIZE = (BLOCK_SIZE - maskDimension + 1);                                   
     
-    int col = blockIdx.x * (BLOCK_SIZE - WC + 1) + threadIdx.x;
-	int row = blockIdx.y * (BLOCK_SIZE - WC + 1) + threadIdx.y;
-	int row_i = row - WC + 1;
-	int col_i = col - WC + 1;
+    int col = blockIdx.x * TILE_SIZE + tx;
+	int row = blockIdx.y * TILE_SIZE + ty;
+    
+    int row_i = row - maskDimension/2;
+    int col_i = col - maskDimension/2;
 
 	float tmp = 0;
 
 	__shared__ float sharedMem[BLOCK_SIZE][BLOCK_SIZE];
 
-	if (row_i < WA && row_i >= 0 && col_i < WA && col_i >= 0) {
-		sharedMem[threadIdx.y][threadIdx.x] = image[col_i * WA + row_i];
+	if (row_i < imageRows && row_i >= 0 && col_i < imageCols && col_i >= 0) {
+		sharedMem[ty][tx] = image[row_i * imageCols + col_i];
 	}
 	else {
-		sharedMem[threadIdx.y][threadIdx.x] = 0;
+		sharedMem[ty][tx] = 0;
 	}
 
 	__syncthreads();
 
-    if (threadIdx.y < (BLOCK_SIZE - WC + 1) && threadIdx.x < (BLOCK_SIZE - WC + 1) 
-            && row < (WB - WC + 1) && col < (WB - WC + 1)) {
-		for (int i = 0; i< WC;i++)
-			for (int j = 0;j<WC;j++)
-				tmp += sharedMem[threadIdx.y + i][threadIdx.x + j] * mask[j*WC + i];
-        // TODO Check if this indexing is correct
-        output[col*WB + row] = tmp;
-        // Or should it be output[row*WB + col] = tmp; 
-	}
+    if (ty < TILE_SIZE && tx < TILE_SIZE) {
+        for (int i=0; i<maskDimension; i++) {
+            for(int j=0; j<maskDimension; j++) {
+                tmp += mask[i * maskDimension + j] * sharedMem[ty + i][tx + j];
+            }
+        }
+        __syncthreads();
+        if (row < outputRows && col < outputCols) {
+            output[row * outputCols + col] = tmp;
+        }
+    } 
+    
 }
 
 __host__ void convolve(const float* image, float* xOutput, float* yOutput, const float* maskx, const float* masky, 
@@ -81,8 +79,6 @@ __host__ void convolve(const float* image, float* xOutput, float* yOutput, const
 
     cudaEventSynchronize(stop_G); 
     */
-    
-    // float* mag = getMagnitudeMatrix(height, width, xOutput, yOutput);
 
 }
 
@@ -96,36 +92,3 @@ __global__ void magnitude_matrix_kernel(float* mag, const float* x, const float*
         mag[index] = mags;
     }
 }
-
-/*
-float* getMagnitudeMatrix(unsigned int height, unsigned int width, float* x, float* y) {
-
-    unsigned int magnitudeSize = height * width;
-    unsigned int magnitudeMemorySize = sizeof(float) * magnitudeSize;
-
-    float* mag = (float*)malloc(magnitudeMemorySize);    
-
-    float mags;
-	float maxVal = 0f;
-	for (int i = 0; i < height; i++)
-	{
-		for(int j = 0; j < width; j++)
-		{
-			mags = sqrt((x[i * width + j] * x[i * width + j]) + (y[i * width + j] * y[i * width + j]));
-
-			if (mags > maxVal)
-				maxVal = mags;
-
-			mag[i * width + j] = mags;
-		}
-	}
-
-	// Make sure all the magnitude values are between 0-255
-    // TODO : We can use a custom kernel to perform this operation here
-	for (int i = 0; i < height; i++)
-		for (int j = 0; j < width; j++)
-            mag[i * width + j] = mag[i * width + j] / maxVal * 255;
-            
-    return mag;        
-}
-*/
