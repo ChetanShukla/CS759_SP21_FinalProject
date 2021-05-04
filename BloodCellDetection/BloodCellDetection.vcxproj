@@ -11,20 +11,23 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <CudaCompile Include="..\EdgeDetection\canny.cu" />
-    <CudaCompile Include="..\EdgeDetection\canny_cpu.cu" />
-    <CudaCompile Include="..\EdgeDetection\canny_main.cu" />
-    <CudaCompile Include="..\EdgeDetection\pixel.cu" />
-    <CudaCompile Include="..\HoughTransform\hough.cu" />
-    <CudaCompile Include="..\HoughTransform\main.cu" />
+    <CudaCompile Include="canny.cu" />
+    <CudaCompile Include="canny_cpu.cu" />
+    <CudaCompile Include="canny_main.cu" />
+    <CudaCompile Include="hough.cu" />
+    <CudaCompile Include="hough_main.cu" />
+    <CudaCompile Include="main.cu" />
+    <CudaCompile Include="pixel.cu" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\EdgeDetection\canny.cuh" />
-    <ClInclude Include="..\EdgeDetection\canny_cpu.cuh" />
-    <ClInclude Include="..\EdgeDetection\pixel.cuh" />
-    <ClInclude Include="..\EdgeDetection\stb_image.h" />
-    <ClInclude Include="..\EdgeDetection\stb_image_write.h" />
-    <ClInclude Include="..\HoughTransform\hough.cuh" />
+    <ClInclude Include="canny.cuh" />
+    <ClInclude Include="canny_cpu.cuh" />
+    <ClInclude Include="canny_main.cuh" />
+    <ClInclude Include="constants.cuh" />
+    <ClInclude Include="hough.cuh" />
+    <ClInclude Include="pixel.cuh" />
+    <ClInclude Include="stb_image.h" />
+    <ClInclude Include="stb_image_write.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{4FE455C4-702C-411B-AA78-06DA056F9BC3}</ProjectGuid>
