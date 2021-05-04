@@ -95,7 +95,7 @@ int main(int argc, char** argv) {
 	int dim = 6 * sig + 1, cent = dim / 2;
 
 	const int hi = 40;
-	const int lo = .35 * hi;
+	const int lo = 0.2 * hi;
 
 	cudaError_t error;
 	unsigned int mask_size = dim * dim;
@@ -148,7 +148,7 @@ int main(int argc, char** argv) {
 		*/
 
 		string filename = "image-" + to_string(image_count) + ".png";
-		string path = "../processed_images/gray/" + filename;
+		string path = "../processed_images/segmented/" + filename;
 
 		//cout << "\nProcessing Image: " << path << "\n\n";
 
