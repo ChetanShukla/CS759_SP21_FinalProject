@@ -1,8 +1,4 @@
 #include "canny_cpu.cuh"
-// #include "global.hpp"
-
-// #include <cstdlib>
-// #include <ctime>
 
 using namespace std;
 

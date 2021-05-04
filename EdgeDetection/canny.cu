@@ -60,28 +60,6 @@ __global__ void convolution_kernel(const float* image, float* output, const floa
     
 }
 
-__host__ void convolve(const float* image, float* xOutput, float* yOutput, const float* maskx, const float* masky, 
-                        int imageRows, int imageCols, int outputRows, int outputCols, int maskDimension) {
-
-    
-    /*
-    dim3 threads(BLOCK_SIZE, BLOCK_SIZE);
-	dim3 grid((WB - 1) / (BLOCK_SIZE - WC + 1), (WB - 1) / (BLOCK_SIZE - WC + 1));
-
-	convolution_kernel <<< grid, threads >>> (image, xOutput, maskx, imageRows, imageCols, outputRows, outputCols, maskDimension, maskDimension);
-
-	cudaEventRecord(start_G);
-
-	convolution_kernel <<< grid, threads >>> (image, yOutput, masky, imageRows, imageCols, outputRows, outputCols, maskDimension, maskDimension);
-	error = cudaGetLastError();
-    
-	cudaEventRecord(stop_G);
-
-    cudaEventSynchronize(stop_G); 
-    */
-
-}
-
 __global__ void magnitude_matrix_kernel(float* mag, const float* x, const float* y, const int height, const int width) {
 
     int index = blockDim.x * blockIdx.x + threadIdx.x;
