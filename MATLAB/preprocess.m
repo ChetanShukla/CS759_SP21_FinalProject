@@ -1,4 +1,4 @@
-function runPreprocess
+function preprocess()
 
 % % Settings to make sure images are displayed without borders.
 % orig_imsetting = iptgetpref('ImshowBorder');
@@ -68,7 +68,7 @@ end
 % edge detection once completed.
 function edge_detection()
 
-output_folder_name = '../processed_images/edges';
+output_folder_name = '../processed_images/edges/MATLAB';
 % Create the output folder if it doesn't exist
 if ~exist(output_folder_name, 'dir')
    mkdir(output_folder_name)
