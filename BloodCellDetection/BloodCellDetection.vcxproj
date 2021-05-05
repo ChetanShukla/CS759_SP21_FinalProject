@@ -10,6 +10,24 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <ItemGroup>
+    <CudaCompile Include="canny.cu" />
+    <CudaCompile Include="canny_cpu.cu" />
+    <CudaCompile Include="canny_main.cu" />
+    <CudaCompile Include="hough.cu" />
+    <CudaCompile Include="hough_main.cu" />
+    <CudaCompile Include="main.cu" />
+    <CudaCompile Include="pixel.cu" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="canny.cuh" />
+    <ClInclude Include="canny_cpu.cuh" />
+    <ClInclude Include="constants.cuh" />
+    <ClInclude Include="hough.cuh" />
+    <ClInclude Include="pixel.cuh" />
+    <ClInclude Include="stb_image.h" />
+    <ClInclude Include="stb_image_write.h" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{4FE455C4-702C-411B-AA78-06DA056F9BC3}</ProjectGuid>
     <RootNamespace>BloodCellDetection</RootNamespace>
@@ -76,9 +94,6 @@
       <TargetMachinePlatform>64</TargetMachinePlatform>
     </CudaCompile>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <CudaCompile Include="kernel.cu" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
     <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 11.2.targets" />

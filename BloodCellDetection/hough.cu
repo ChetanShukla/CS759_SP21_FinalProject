@@ -25,14 +25,14 @@ __global__ void accumulate_edge_points(uint8_t* image, int image_size, int* edge
 	//Bring in the proper pixel from global memory
 	int pixel = image[image_y * image_size + image_x];
 	//If the pixel is part of an edge
-	if (pixel == 1)
+	if (pixel == 255)
 	{
 		int write_ind = atomicAdd(&sh_next, 1);
 		//Write the point to shared memory
 		//Swap x and y b/c the image is really stored columnwise from the MATLAB
 		//binary image export.
-		sh_edges_x[write_ind] = image_y;
-		sh_edges_y[write_ind] = image_x;
+		sh_edges_x[write_ind] = image_x;
+		sh_edges_y[write_ind] = image_y;
 	}
 	__syncthreads();
 
