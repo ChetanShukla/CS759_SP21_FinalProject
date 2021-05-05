@@ -28,6 +28,10 @@ void printArrayForDebugging(float* arr, int height, int width) {
 }
 
 void prepare_mask_arrays(float* maskx, float* masky, size_t dimension, int sigma) {
+	/*
+	Credit to https://github.com/sorazy/canny/
+	Slight modifications were made for our use case.
+	*/
 	int cent = dimension / 2;
 
 	// Use the Gausian 1st derivative formula to fill in the mask values
@@ -50,6 +54,10 @@ void prepare_mask_arrays(float* maskx, float* masky, size_t dimension, int sigma
 }
 
 void getNormalisedMagnitudeMatrix(float* mag, unsigned int height, unsigned int width) {
+	/*
+	Credit to https://github.com/sorazy/canny/
+	Slight modifications were made for our use case.
+	*/
 	if (DEBUG) {
 		printf("\n\nMagnitude matrix before normalisation:\n");
 		printArrayForDebugging(mag, height, width);

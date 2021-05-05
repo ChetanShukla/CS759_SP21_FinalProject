@@ -1,3 +1,7 @@
+/*
+Credit to https://github.com/sorazy/canny/ for these to functions.
+Slight modifications were made for our use case.
+*/
 #include "canny_cpu.cuh"
 
 using namespace std;
