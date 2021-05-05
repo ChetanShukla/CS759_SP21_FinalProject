@@ -22,7 +22,6 @@
   <ItemGroup>
     <ClInclude Include="canny.cuh" />
     <ClInclude Include="canny_cpu.cuh" />
-    <ClInclude Include="canny_main.cuh" />
     <ClInclude Include="constants.cuh" />
     <ClInclude Include="hough.cuh" />
     <ClInclude Include="pixel.cuh" />

@@ -50,8 +50,10 @@ void prepare_mask_arrays(float* maskx, float* masky, size_t dimension, int sigma
 }
 
 void getNormalisedMagnitudeMatrix(float* mag, unsigned int height, unsigned int width) {
-	// printf("\n\nMagnitude matrix before normalisation:\n");
-	// printArrayForDebugging(mag, height, width);
+	if (DEBUG) {
+		printf("\n\nMagnitude matrix before normalisation:\n");
+		printArrayForDebugging(mag, height, width);
+	}
 
 	float maxVal = 0.0;
 	unsigned int i, j;
@@ -62,8 +64,6 @@ void getNormalisedMagnitudeMatrix(float* mag, unsigned int height, unsigned int 
 			}
 		}
 	}
-
-	// printf("maxVal: %f\n", maxVal);
 
 	// Make sure all the magnitude values are between 0-255
 	for (i = 0; i < height; i++)
@@ -93,14 +93,14 @@ int canny_main(uint8_t* img, uint8_t* final) {
 	float* dev_mask_x;
 	float* dev_mask_y;
 
-	// allocate memory for x[] on the device(GPU)
+	// allocate memory for dev_mask_x on the device(GPU)
 	error = cudaMalloc((void**)&dev_mask_x, mask_memory_size);
 	if (error != cudaSuccess) {
 		printf("Allocation for mask_x[] on the device memory failed!");
 		return EXIT_FAILURE;
 	}
 
-	// allocate memory for y[] on the device(GPU)
+	// allocate memory for dev_mask_y on the device(GPU)
 	error = cudaMalloc((void**)&dev_mask_y, mask_memory_size);
 	if (error != cudaSuccess) {
 		printf("Allocation for mask_y[] on the device memory failed!");
@@ -135,8 +135,7 @@ int canny_main(uint8_t* img, uint8_t* final) {
 
 	unsigned int mem_size_x = sizeof(float) * IMAGE_WIDTH * IMAGE_HEIGHT;
 	unsigned int mem_size_y = sizeof(float) * IMAGE_WIDTH * IMAGE_HEIGHT;
-	unsigned int img_size = IMAGE_WIDTH * IMAGE_HEIGHT;
-	unsigned int mem_size_img = sizeof(uint8_t) * img_size;
+	unsigned int mem_size_img = sizeof(uint8_t) * IMAGE_WIDTH * IMAGE_HEIGHT;
 
 	// allocate memory for x[] on the device(GPU)
 	error = cudaMalloc((void**)&dev_x, mem_size_x);
@@ -209,7 +208,7 @@ int canny_main(uint8_t* img, uint8_t* final) {
 	}
 
 	const int threads_per_block = 256;
-	int num_blocks = (img_size + threads_per_block - 1) / threads_per_block;
+	int num_blocks = (IMAGE_WIDTH * IMAGE_HEIGHT + threads_per_block - 1) / threads_per_block;
 
 	// Step 4: Get the magnitude matrix using the x[] and y[] that we got from the previous step
 
@@ -225,8 +224,10 @@ int canny_main(uint8_t* img, uint8_t* final) {
 
 	getNormalisedMagnitudeMatrix(mag, IMAGE_HEIGHT, IMAGE_WIDTH);
 
-	//printf("\n\nMagnitude Matrix After: \n");
-	//printArrayForDebugging(mag, IMAGE_HEIGHT, IMAGE_WIDTH);
+	if (DEBUG) {
+		printf("\n\nMagnitude Matrix After: \n");
+		printArrayForDebugging(mag, IMAGE_HEIGHT, IMAGE_WIDTH);
+	}
 
 	// Step 5: Get all the peaks and store them in a vector
 	unordered_map<Pixel*, bool> peaks;

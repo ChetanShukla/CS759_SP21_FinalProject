@@ -1,8 +1,10 @@
 ﻿#include <string>
+#include <fstream>
 #include "constants.cuh"
-#include "canny_main.cuh"
+#include "canny.cuh"
+#include "hough.cuh"
 
-#define NUM_IMAGES 1
+#define NUM_IMAGES 100
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
@@ -13,10 +15,12 @@ using namespace std;
 
 int main() {
 	int img_width, img_height, img_channels;
-
+	const string input_dir = "../processed_images/segmented/";
+	/*TODO: fix this path issue*/
+	const string output_dir = "C:\\Users\\djkong7\\Documents\\GitHub\\CS759_SP21_FinalProject\\processed_images\\hough\\binary\\";
 	for (int image_count = 1; image_count <= NUM_IMAGES; image_count++) {
 		string filename = "image-" + to_string(image_count) + ".png";
-		string input_dir = "../processed_images/segmented/";
+
 		string full_path = input_dir + filename;
 
 		if (DEBUG) {
@@ -29,12 +33,35 @@ int main() {
 			exit(1);
 		}
 
-		uint8_t* output = new uint8_t[IMAGE_WIDTH * IMAGE_HEIGHT]{ 0 };
+		uint8_t* edges = new uint8_t[IMAGE_WIDTH * IMAGE_HEIGHT]{ 0 };
 
-		int idk = canny_main(img, output);
-		stbi_image_free(img);
+		int canny_retval = canny_main(img, edges);
+		if (canny_retval != 0) {
+			exit(canny_retval);
+		}
 
 		string output_path = "../processed_images/edges/" + filename;
-		stbi_write_png(output_path.c_str(), IMAGE_WIDTH, IMAGE_HEIGHT, 1, output, IMAGE_WIDTH);
+		stbi_write_png(output_path.c_str(), IMAGE_WIDTH, IMAGE_HEIGHT, 1, edges, IMAGE_WIDTH);
+
+		int* accumulator = new int[TOTAL_ACC_SIZE];
+		int hough_retval = hough_main(edges, accumulator);
+		if (hough_retval != 0) {
+			exit(hough_retval);
+		}
+
+		ofstream my_file_out((output_dir + "image-" + to_string(image_count) + "-out"), ios::out | ios::binary);
+		if (my_file_out.is_open()) {
+			my_file_out.write((char*)accumulator, sizeof(int) * TOTAL_ACC_SIZE);
+			my_file_out.close();
+		}
+		else {
+			printf("Output file not opened\n");
+			return 1;
+		}
+
+		stbi_image_free(img);
+		delete[] edges;
+		delete[] accumulator;
 	}
+	return 0;
 }

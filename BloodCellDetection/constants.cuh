@@ -1,3 +1,3 @@
 ﻿#define IMAGE_WIDTH 256
 #define IMAGE_HEIGHT IMAGE_WIDTH
-#define DEBUG true
+#define DEBUG false
