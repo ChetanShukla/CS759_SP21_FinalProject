@@ -57,7 +57,9 @@ function runHoughAccumulator()
         % between 0 and 255.
         imwrite(uint8(rescale(acc,0,255)), strcat(hough_output_folder_name,'/image-',num2str(i),'.png'));
         
-        circles = findCircles(acc,shrink_factor,radius_start);
+        circles = findCircles(acc);
+        circles(:,1:2) = circles(:,1:2)*shrink_factor-1;
+        circles(:,3) = (circles(:,3)+radius_start)*shrink_factor;
         
         img_circles = drawCircles(imread(strcat(original_folder_name,'/image-', num2str(i), '.png')),circles); 
         imwrite(uint8(img_circles),strcat(bloodcell_output_folder_name,'/image-', num2str(i), '.png'));
@@ -96,7 +98,10 @@ function runProcessGPUHough()
         % between 0 and 255.
         imwrite(uint8(rescale(acc,0,255)), strcat(hough_output_folder_name,'/image-',num2str(i),'.png'));
         
-        circles = findCircles(acc,shrink_factor,radius_start);
+        circles = findCircles(acc);
+        circles(:,1:2) = circles(:,1:2)*shrink_factor-1;
+        circles(:,3) = (circles(:,3)+radius_start)*shrink_factor;
+        
         img_circles = drawCircles(imread(strcat(original_folder_name,'/image-', num2str(i), '.png')),circles); 
         imwrite(uint8(img_circles),strcat(bloodcell_output_folder_name,'/image-', num2str(i), '.png'));
 

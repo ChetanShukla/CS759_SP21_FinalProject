@@ -1,22 +1,27 @@
-function circles = findCircles(acc,shrink_factor,radius_start)
+function circles = findCircles(acc)
 
     [sorted_vals,ix] = sort(acc(:),'descend');
     threshold = sorted_vals(1)/2;
     counter = 1;
-    val = 10;
     circles = zeros(0,3);
+    out_range = true;
     while(sorted_vals(counter)>threshold)
         [i,j,k] = ind2sub(size(acc),ix(counter));
         
-        if acc(i,j,k) > 0
-            circles = [circles; [j*shrink_factor-1,i*shrink_factor-1,(k+radius_start)*shrink_factor]];
-            acc(clamp(i-val):clamp(i+val),clamp(j-val):clamp(j+val),:) = 0;
+        for z = 1:size(circles,1)
+            circle = circles(z,:);
+            distance = sqrt((circle(1)-j)^2+(circle(2)-i)^2);
+            if  distance < 10
+                out_range = false;
+                break
+            end
         end
         
+        if out_range
+           circles = [circles; [j,i,k]];
+        end
+        
+        out_range = true;
         counter = counter +1;
     end
 end
-
-function ret_val = clamp(val)
-    ret_val = min(max(val,1),64);
-end 
