@@ -16,8 +16,13 @@ using namespace std;
 int main() {
 	int img_width, img_height, img_channels;
 	const string input_dir = "../processed_images/segmented/";
-	/*TODO: fix this path issue*/
-	const string output_dir = "C:\\Users\\djkong7\\Documents\\GitHub\\CS759_SP21_FinalProject\\processed_images\\hough\\binary\\";
+
+#ifdef _WIN32
+	const string output_dir = "..\\processed_images\\hough\\binary\\";
+#else
+	const string output_dir = "../processed_images/hough/binary/";
+#endif
+
 	for (int image_count = 1; image_count <= NUM_IMAGES; image_count++) {
 		string filename = "image-" + to_string(image_count) + ".png";
 
