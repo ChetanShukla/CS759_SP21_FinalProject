@@ -1,3 +1,8 @@
-﻿#define IMAGE_WIDTH 256
+﻿#ifndef BCD_CONSTANTS_CUH
+#define BCD_CONSTANTS_CUH
+
+#define IMAGE_WIDTH 256
 #define IMAGE_HEIGHT IMAGE_WIDTH
 #define DEBUG false
+
+#endif // !BCD_CONSTANTS_CUH

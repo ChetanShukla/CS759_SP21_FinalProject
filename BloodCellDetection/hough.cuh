@@ -12,4 +12,4 @@ __global__ void accumulate_edge_points(uint8_t* image, int image_size, int* edge
 __global__ void hough(int* edges_x, int* edges_y, int* edges_len, int* global_acc);
 int hough_main(uint8_t* edges, int* accumulator);
 
-#endif HOUGH_CUH
+#endif
